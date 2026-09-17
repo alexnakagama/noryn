@@ -1,6 +1,8 @@
 package openai
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type Client struct {
 	apiKey     string
@@ -14,4 +16,14 @@ func NewClient(apiKey string) *Client {
 		httpClient: &http.Client{},
 		baseURL:    "https://api.openai.com/v1",
 	}
+}
+
+type request struct {
+	Model string  `json:"model"`
+	Input []input `json:"input"`
+}
+
+type input struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
