@@ -30,4 +30,9 @@ func main() {
 	}
 
 	fmt.Println(response.Message.Content)
+
+	for _, toolCall := range response.ToolCall {
+		fmt.Println("Tool:", toolCall.Name)
+		fmt.Println("Arguments:", toolCall.Arguments)
+	}
 }
