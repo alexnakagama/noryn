@@ -2,7 +2,7 @@ package llm
 
 type Message struct {
 	Role    string
-	Message string
+	Content string
 }
 
 type Request struct {

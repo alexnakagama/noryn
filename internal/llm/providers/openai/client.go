@@ -1,7 +1,10 @@
 package openai
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/alexnakagama/noryn/internal/llm"
@@ -31,4 +34,81 @@ type input struct {
 	Content string `json:"content"`
 }
 
-func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error) {}
+type response struct {
+	Output []output `json:"output"`
+}
+
+type output struct {
+	Type    string    `json:"type"`
+	Content []content `json:"content"`
+}
+
+type content struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error) {
+	inputs := make([]input, 0, len(req.Messages))
+
+	for _, message := range req.Messages {
+		inputs = append(inputs, input{
+			Role:    message.Role,
+			Content: message.Content,
+		})
+	}
+
+	body := request{
+		Model: req.Model,
+		Input: inputs,
+	}
+
+	data, err := json.Marshal(body)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		c.baseURL+"/responses",
+		bytes.NewReader(data),
+	)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("create req: %w", err)
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return llm.Response{}, fmt.Errorf("send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return llm.Response{}, fmt.Errorf("openai returned status %d", resp.StatusCode)
+	}
+
+	var result response
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return llm.Response{}, fmt.Errorf("decode response: %w", err)
+	}
+
+	for _, output := range result.Output {
+		for _, content := range output.Content {
+			if content.Type == "output_text" {
+				return llm.Response{
+					Message: llm.Message{
+						Role:    "assistant",
+						Content: content.Text,
+					},
+				}, nil
+			}
+		}
+	}
+
+	return llm.Response{}, fmt.Errorf("openai response contains no text")
+}
