@@ -28,3 +28,5 @@ func New(client llm.Client, toolList ...tools.Tool) *Agent {
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
 	return a.client.Chat(ctx, request)
 }
+
+func (a *Agent) executeTool(call llm.ToolCall) (string, error) {}
