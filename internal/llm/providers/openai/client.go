@@ -1,7 +1,10 @@
 package openai
 
 import (
+	"context"
 	"net/http"
+
+	"github.com/alexnakagama/noryn/internal/llm"
 )
 
 type Client struct {
@@ -27,3 +30,5 @@ type input struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
+
+func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error) {}
