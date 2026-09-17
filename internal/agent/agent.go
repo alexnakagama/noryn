@@ -12,9 +12,16 @@ type Agent struct {
 	tools  map[string]tools.Tool
 }
 
-func New(client llm.Client) *Agent {
+func New(client llm.Client, toolList ...tools.Tool) *Agent {
+	toolMap := make(map[string]tools.Tool)
+
+	for _, tool := range toolList {
+		toolMap[tool.Name()] = tool
+	}
+
 	return &Agent{
 		client: client,
+		tools:  toolMap,
 	}
 }
 
