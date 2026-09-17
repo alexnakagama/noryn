@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/alexnakagama/noryn/internal/llm"
+	"github.com/alexnakagama/noryn/internal/tools"
 )
 
 type Agent struct {
 	client llm.Client
+	tools  map[string]tools.Tool
 }
 
 func New(client llm.Client) *Agent {
