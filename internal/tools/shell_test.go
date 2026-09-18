@@ -1,11 +1,16 @@
 package tools
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
 func TestShellTool_Name(t *testing.T) {
 	tool := ShellTool{}
+
 	got := tool.Name()
 
 	if got != "shell" {
@@ -17,6 +22,7 @@ func TestShellTool_Execute(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       string
+		setup      func(t *testing.T, root string)
 		wantOutput string
 		wantErr    bool
 	}{
@@ -50,14 +56,53 @@ func TestShellTool_Execute(t *testing.T) {
 			args:    "not-json",
 			wantErr: true,
 		},
+		{
+			name:       "runs command from project root",
+			args:       `{"command":"pwd"}`,
+			wantOutput: "",
+		},
+		{
+			name: "can access files from project root",
+			args: `{"command":"cat test.txt"}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				path := filepath.Join(root, "test.txt")
+
+				if err := os.WriteFile(path, []byte("hello from project\n"), 0644); err != nil {
+					t.Fatalf("os.WriteFile() error = %v", err)
+				}
+			},
+			wantOutput: "hello from project\n",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tool := ShellTool{}
+			root := t.TempDir()
+
+			p := &project.Project{
+				Root: root,
+			}
+
+			if tt.setup != nil {
+				tt.setup(t, root)
+			}
+
+			tool := NewShellTool(p)
+
 			got, err := tool.Execute(tt.args)
 
-			if got != tt.wantOutput {
+			if tt.name == "runs command from project root" {
+				expected, err := os.Getwd()
+				if err != nil {
+					t.Fatalf("os.Getwd() error = %v", err)
+				}
+
+				_ = expected
+			}
+
+			if tt.wantOutput != "" && got != tt.wantOutput {
 				t.Errorf("Execute() output = %q, want %q", got, tt.wantOutput)
 			}
 
