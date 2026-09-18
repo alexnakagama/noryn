@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/project"
 )
 
@@ -42,6 +43,8 @@ func (t *SearchTool) Name() string {
 func (t *SearchTool) Description() string {
 	return "Search for text inside project files."
 }
+
+func (t *SearchTool) Definition() llm.ToolDefinition {}
 
 func (t *SearchTool) Execute(arguments string) (string, error) {
 	var args searchArguments
