@@ -10,6 +10,10 @@ type Project struct {
 }
 
 func (p *Project) ResolvePath(path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("path cannot be empty")
+	}
+
 	absPath, err := filepath.Abs(filepath.Join(p.Root, path))
 	if err != nil {
 		return "", err
