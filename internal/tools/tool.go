@@ -4,6 +4,7 @@ import "github.com/alexnakagama/noryn/internal/llm"
 
 type Tool interface {
 	Name() string
+	Description() string
 	Execute(arguments string) (string, error)
 	Definition() llm.ToolDefinition
 }
