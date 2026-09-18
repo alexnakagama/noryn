@@ -68,3 +68,30 @@ func TestBuildContext(t *testing.T) {
 		}
 	}
 }
+
+func TestContextString(t *testing.T) {
+	ctx := Context{
+		Root: "/tmp/noryn",
+		Files: []string{
+			"main.go",
+			"internal/agent/agent.go",
+			"go.mod",
+		},
+	}
+
+	got := ctx.String()
+
+	expected := "Project root: /tmp/noryn\n" +
+		"Files:\n" +
+		"- main.go\n" +
+		"- internal/agent/agent.go\n" +
+		"- go.mod\n"
+
+	if got != expected {
+		t.Errorf(
+			"Context.String() = %q, want %q",
+			got,
+			expected,
+		)
+	}
+}
