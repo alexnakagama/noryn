@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os/exec"
 
+	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/project"
 )
 
@@ -23,6 +24,26 @@ func NewGitDiffTool(project *project.Project) *GitDiffTool {
 
 func (t *GitDiffTool) Name() string {
 	return "git_diff"
+}
+
+func (t *GitDiffTool) Description() string {
+	return "Show the Git diff of the project or a specific file."
+}
+
+func (t *GitDiffTool) Definition() llm.ToolDefinition {
+	return llm.ToolDefinition{
+		Name:        t.Name(),
+		Description: t.Description(),
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"path": map[string]any{
+					"type":        "string",
+					"description": "Optional path of the file to show the diff for.",
+				},
+			},
+		},
+	}
 }
 
 func (t *GitDiffTool) Execute(arguments string) (string, error) {
