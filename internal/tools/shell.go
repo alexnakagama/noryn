@@ -3,9 +3,13 @@ package tools
 import (
 	"encoding/json"
 	"os/exec"
+
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
-type ShellTool struct{}
+type ShellTool struct {
+	project *project.Project
+}
 
 type shellArguments struct {
 	Command string `json:"command"`
