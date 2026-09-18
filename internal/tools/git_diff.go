@@ -16,4 +16,6 @@ func NewGitDiffTool(project *project.Project) *GitDiffTool {
 	}
 }
 
-func (t *GitDiffTool) Name() string {}
+func (t *GitDiffTool) Name() string {
+	return "git_diff"
+}
