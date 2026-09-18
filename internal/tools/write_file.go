@@ -34,7 +34,12 @@ func (t *WriteFileTool) Execute(arguments string) (string, error) {
 		return "", err
 	}
 
-	err = os.WriteFile(args.Path, []byte(args.Content), 0644)
+	path, err := t.project.ResolvePath(args.Path)
+	if err != nil {
+		return "", err
+	}
+
+	err = os.WriteFile(path, []byte(args.Content), 0644)
 	if err != nil {
 		return "", err
 	}
