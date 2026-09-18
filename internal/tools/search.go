@@ -16,3 +16,7 @@ func NewSearchTool(project *project.Project) *SearchTool {
 		project: project,
 	}
 }
+
+func (t *SearchTool) Name() string {
+	return "search"
+}
