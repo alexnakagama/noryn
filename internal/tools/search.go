@@ -53,11 +53,11 @@ func (t *SearchTool) Definition() llm.ToolDefinition {
 			"properties": map[string]any{
 				"query": map[string]any{
 					"type":        "string",
-					"description": "Text to search for",
+					"description": "Text to search for.",
 				},
 				"path": map[string]any{
 					"type":        "string",
-					"description": "Directory or file path to search in",
+					"description": "Directory or file path to search in.",
 				},
 			},
 			"required": []string{"query", "path"},
