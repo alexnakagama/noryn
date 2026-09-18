@@ -418,3 +418,39 @@ func TestTruncateToolResult(t *testing.T) {
 		})
 	}
 }
+
+func TestRecentHistory(t *testing.T) {
+	tests := []struct {
+		name          string
+		historyLength int
+		wantLength    int
+	}{
+		{
+			name:          "history shorter than limit",
+			historyLength: 10,
+			wantLength:    10,
+		},
+		{
+			name:          "history exactly at limit",
+			historyLength: maxHistoryMessages,
+			wantLength:    maxHistoryMessages,
+		},
+		{
+			name:          "history longer than limit",
+			historyLength: maxHistoryMessages + 10,
+			wantLength:    maxHistoryMessages,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			history := make([]llm.Message, tt.historyLength)
+
+			got := recentHistory(history)
+
+			if len(got) != tt.wantLength {
+				t.Errorf("recentHistory() returned %d messages, want %d", len(got), tt.wantLength)
+			}
+		})
+	}
+}
