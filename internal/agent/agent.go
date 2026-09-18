@@ -48,7 +48,7 @@ func New(client llm.Client, toolList ...tools.Tool) *Agent {
 
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
 	a.history = append(a.history, request.Messages...)
-	request.Messages = a.history
+	request.Messages = recentHistory(a.history)
 	request.Tools = a.toolDefinitions()
 
 	for {
@@ -63,7 +63,7 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		}
 
 		a.history = append(a.history, response.Message)
-		request.Messages = a.history
+		request.Messages = recentHistory(a.history)
 
 		for _, call := range response.ToolCalls {
 			result, err := a.executeTool(call)
@@ -79,7 +79,7 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 				ToolCallID: call.ID,
 			})
 
-			request.Messages = a.history
+			request.Messages = recentHistory(a.history)
 		}
 	}
 }
