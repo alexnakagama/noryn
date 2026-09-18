@@ -1,201 +1,146 @@
-# Noryn — Agent Instructions
 
-## Project Overview
+# Noryn
 
-Noryn is an AI coding agent for the terminal, built entirely around Go.
+Noryn is an AI coding agent written in Go that provides an agentic software development experience from the terminal.
 
-The goal of Noryn is to provide an agentic software development experience directly from the command line. Noryn uses LLMs as its reasoning engine and provides them with controlled tools to inspect, understand, modify, and test software projects.
+Noryn uses LLMs as its reasoning engine and provides controlled tools for inspecting, understanding, modifying, testing, and interacting with software projects.
 
-Noryn is **not** an ML/DL framework and does not train or implement machine learning models.
+Noryn is **not** an ML/DL framework and does not train or implement its own models.
 
-The project focuses on **AI Engineering and Software Engineering**:
+## Core Principles
 
-* LLM integration
-* Agent loops
-* Tool calling
-* Codebase understanding
-* File manipulation
-* Shell execution
-* Git integration
-* Context management
-* Terminal UX
-* Provider abstraction
-* Reliable and safe agent behavior
+### Go First
 
----
+* Use Go as the primary implementation language.
+* Prefer the Go standard library when practical.
+* Use external dependencies only when they provide clear value.
+* Write idiomatic Go.
+* Prefer small interfaces and explicit error handling.
+* Prefer composition over inheritance.
+* Keep data structures and control flow simple.
 
-# Core Principles
+### Keep Architecture Simple
 
-## 1. Go First
+* Separate responsibilities clearly.
+* Create abstractions only when they solve an actual problem.
+* Avoid unnecessary interfaces, factories, and generic abstractions.
+* Avoid deep package hierarchies.
+* Do not rewrite working code without a reason.
+* Prefer simple implementations over premature abstractions.
 
-Noryn is a Go project.
+### Preserve User Work
 
-Prefer the Go standard library whenever it provides a reasonable solution.
-
-Avoid introducing dependencies without a clear reason.
-
-Use idiomatic Go:
-
-* Small interfaces
-* Explicit error handling
-* Composition over inheritance
-* Simple data structures
-* Context propagation
-* Clear package responsibilities
-* Avoid unnecessary abstractions
-
-Do not introduce patterns simply because they are common in other languages.
+* Never silently destroy user files or Git changes.
+* Keep modifications focused on the requested task.
+* Inspect existing code before modifying it.
+* Do not overwrite unrelated changes.
+* Prefer small, understandable changes.
 
 ---
 
-## 2. Keep the Architecture Simple
-
-Noryn should follow clean architecture principles without overengineering.
-
-The main goal is separation of responsibilities and dependency inversion.
-
-Do not create abstractions before they are needed.
-
-Avoid:
-
-* Interfaces with only one trivial implementation when no substitution is required
-* Excessive factories
-* Unnecessary repositories
-* Deep package hierarchies
-* Generic abstractions with no concrete use case
-
-Prefer simple, explicit code.
-
----
-
-# Architecture
-
-The current conceptual architecture is:
-
-```text
-User
- │
- ▼
-Terminal UI
- │
- ▼
-Agent
- │
- ├──────────────► LLM
- │
- ├──────────────► Tools
- │                  ├── Filesystem
- │                  ├── Search
- │                  ├── Shell
- │                  └── Git
- │
- └──────────────► Context
-```
-
-The agent coordinates the workflow.
-
-The LLM provides reasoning and generates tool calls.
-
-Tools perform operations in the real environment.
-
-The agent feeds tool results back to the LLM.
-
----
-
-# Project Structure
-
-The intended project structure is:
+## Project Structure
 
 ```text
 noryn/
 ├── cmd/
 │   └── noryn/
 │       └── main.go
-│
 ├── internal/
 │   ├── agent/
 │   │   ├── agent.go
-│   │   ├── loop.go
-│   │   └── context.go
-│   │
+│   │   └── agent_test.go
+│   ├── config/
+│   │   └── config.go
+│   ├── instructions/
+│   │   ├── builder.go
+│   │   └── builder_test.go
 │   ├── llm/
 │   │   ├── client.go
+│   │   ├── types.go
 │   │   └── providers/
-│   │
-│   ├── tools/
-│   │   ├── tool.go
-│   │   ├── filesystem.go
-│   │   ├── search.go
-│   │   ├── shell.go
-│   │   └── git.go
-│   │
+│   │       ├── fake/
+│   │       ├── openai/
+│   │       └── openrouter/
 │   ├── project/
 │   │   ├── project.go
 │   │   └── scanner.go
-│   │
-│   ├── context/
-│   │   └── ...
-│   │
-│   ├── tui/
-│   │   └── ...
-│   │
-│   └── config/
-│       └── ...
-│
+│   └── tools/
+│       ├── tool.go
+│       ├── read_file.go
+│       ├── write_file.go
+│       ├── list_directory.go
+│       ├── shell.go
+│       ├── search.go
+│       ├── git_status.go
+│       ├── git_diff.go
+│       └── git_log.go
+├── AGENTS.md
 ├── go.mod
-├── go.sum
-└── AGENTS.md
+└── go.sum
 ```
-
-The structure can evolve as the project grows. Do not create empty packages simply to match this structure.
 
 ---
 
-# Agent
-
-The `agent` package contains the core agent loop.
-
-The agent is responsible for coordinating:
+## Architecture
 
 ```text
-User Input
-    ↓
-Build Context
-    ↓
-Send Request to LLM
-    ↓
-Receive Response
-    ↓
-Does the LLM request a Tool?
-    │
-    ├── No → Return Response
-    │
-    └── Yes
-          ↓
-       Execute Tool
-          ↓
-       Get Result
-          ↓
-       Add Result to Context
-          ↓
-       Call LLM Again
+User
+  ↓
+CLI
+  ↓
+Project Discovery
+  ↓
+Instructions Builder
+  ↓
+Agent
+  ├── LLM Client
+  └── Tools
+       ├── Filesystem
+       ├── Search
+       ├── Shell
+       └── Git
 ```
 
-The agent should not know how individual tools are implemented.
+### Project
 
-The agent should not directly manipulate the filesystem or execute shell commands.
+The `project` package is responsible for discovering the project root and resolving paths safely inside that project.
 
-The agent should communicate with those capabilities through the tool abstraction.
+The project root is currently discovered by searching for `go.mod`.
 
----
+Tools that access project files should use the project's path resolution instead of directly trusting arbitrary paths.
 
-# LLM Layer
+### Instructions
 
-The `llm` package is responsible for communication with language models.
+The `instructions` package is responsible for loading project-specific instructions for the LLM.
 
-The agent should depend on an abstraction rather than directly depending on a specific provider.
+Currently it reads:
 
-Conceptually:
+```text
+AGENTS.md
+```
+
+The instructions are loaded before the agent request and included in the initial LLM context.
+
+### Agent
+
+The `agent` package coordinates the interaction between the LLM and tools.
+
+The agent:
+
+1. Receives a request.
+2. Provides available tool definitions to the LLM.
+3. Sends the request to the LLM.
+4. Checks whether the LLM requested tools.
+5. Executes requested tools.
+6. Adds tool results to the conversation.
+7. Sends the updated conversation to the LLM.
+8. Continues until the LLM returns a response without tool calls.
+
+### LLM
+
+The `llm` package provides a provider-independent abstraction for interacting with language models.
+
+The main interface is:
 
 ```go
 type Client interface {
@@ -203,448 +148,270 @@ type Client interface {
 }
 ```
 
-Possible implementations may include:
+Providers implement this interface.
 
-```text
-LLM Client
-├── OpenAI
-├── Anthropic
-├── Gemini
-├── OpenAI-compatible APIs
-└── Local models
-```
+Current providers:
 
-The exact provider implementation should remain isolated from the agent.
+* Fake
+* OpenAI
+* OpenRouter
 
-Adding a new provider should not require changing the agent loop.
+The provider and model can be selected through configuration or CLI flags.
 
----
+### Tools
 
-# Tools
-
-Tools are capabilities that the LLM can request from Noryn.
-
-Initial tools should include:
-
-```text
-read_file
-write_file
-edit_file
-list_directory
-search_code
-run_command
-git_status
-git_diff
-```
-
-Every tool should have:
-
-* A clear name
-* A description
-* A well-defined input schema
-* A predictable output
-* Explicit error handling
-
-Tools must not silently perform destructive operations.
-
----
-
-# Filesystem
-
-Filesystem tools allow the agent to understand and modify the current project.
-
-The agent should be able to:
-
-* List directories
-* Read files
-* Create files
-* Modify files
-* Delete files when explicitly allowed
-* Search project contents
-
-The implementation must consider:
-
-* Relative paths
-* Absolute paths
-* Path traversal
-* Binary files
-* Large files
-* Missing files
-* Permission errors
-
-Never assume a file exists.
-
-Never silently overwrite important files without the appropriate permission or confirmation mechanism.
-
----
-
-# Shell Execution
-
-Noryn should eventually allow the LLM to execute shell commands.
-
-Example:
-
-```text
-go test ./...
-git diff
-go build ./...
-```
-
-Shell execution is a sensitive capability.
-
-Commands should be visible to the user before or during execution.
-
-Potentially destructive operations should require explicit user approval.
-
-Do not implement unrestricted hidden shell execution.
-
----
-
-# Git
-
-Git integration should help the agent understand and safely modify repositories.
-
-Initial capabilities:
-
-```text
-git status
-git diff
-git diff --cached
-git log
-```
-
-Later capabilities may include:
-
-```text
-git add
-git commit
-```
-
-Git operations should never discard user changes automatically.
-
-Noryn must preserve changes that existed before the agent started working.
-
----
-
-# Context Management
-
-Context management is a core part of Noryn.
-
-The agent should not blindly send the entire repository to the LLM.
-
-Instead, it should progressively gather relevant information.
-
-Example:
-
-```text
-User request
-     ↓
-Project structure
-     ↓
-Relevant files
-     ↓
-Search results
-     ↓
-Specific file contents
-     ↓
-Tool results
-     ↓
-LLM context
-```
-
-The system should eventually support:
-
-* Conversation history
-* Project context
-* File context
-* Tool results
-* Context limits
-* Context pruning
-* Summarization
-* Relevant-file selection
-
----
-
-# Agent Behavior
-
-The agent should be autonomous enough to complete development tasks but transparent enough for the developer to understand what it is doing.
-
-For a request such as:
-
-```text
-Fix the authentication bug.
-```
-
-The agent should generally:
-
-```text
-1. Understand the request
-2. Inspect the project
-3. Locate relevant code
-4. Read the necessary files
-5. Determine a possible solution
-6. Modify the code
-7. Run relevant tests
-8. Inspect failures
-9. Iterate if necessary
-10. Explain what changed
-```
-
-Do not make arbitrary changes unrelated to the user's request.
-
-Prefer the smallest change that correctly solves the problem.
-
----
-
-# Code Changes
-
-Before modifying code:
-
-1. Inspect the existing implementation.
-2. Understand the surrounding code.
-3. Follow existing project conventions.
-4. Avoid unnecessary refactoring.
-5. Make the smallest reasonable change.
-
-After modifying code:
-
-1. Format the code.
-2. Run relevant tests.
-3. Run static checks when available.
-4. Inspect the resulting diff.
-5. Report relevant failures clearly.
-
-Never claim that tests passed if they were not actually executed.
-
----
-
-# Error Handling
-
-Errors should be explicit and useful.
-
-Prefer:
+Tools implement the following interface:
 
 ```go
-if err != nil {
-    return fmt.Errorf("read project file: %w", err)
+type Tool interface {
+    Name() string
+    Description() string
+    Definition() llm.ToolDefinition
+    Execute(arguments string) (string, error)
 }
 ```
 
-over silently ignoring errors.
+Current tools:
 
-Do not use panic for normal runtime errors.
+* `read_file`
+* `write_file`
+* `list_directory`
+* `shell`
+* `search`
+* `git_status`
+* `git_diff`
+* `git_log`
 
-Errors should retain their original cause where possible.
+Tool definitions describe the tool's purpose and parameters to the LLM.
 
----
-
-# Concurrency
-
-Use concurrency only when it provides a real benefit.
-
-Potential areas where concurrency may eventually be useful:
-
-* Parallel file searches
-* Tool execution where operations are independent
-* Streaming
-* Multiple background tasks
-
-Do not introduce goroutines merely to make code "more concurrent".
-
-Always consider cancellation through `context.Context`.
+Tool execution happens locally inside Noryn.
 
 ---
 
-# Configuration
+## Agent Loop
 
-Configuration should be separated from application logic.
+The core agent loop is:
 
-Sensitive information such as API keys must never be hardcoded.
-
-Use environment variables or configuration files.
-
-Never commit secrets.
-
----
-
-# Testing
-
-Tests should focus on behavior.
-
-Important areas to test:
-
-* Agent loop
-* Tool execution
-* Tool input validation
-* LLM request/response handling
-* Context management
-* Filesystem operations
-* Shell command handling
-* Configuration
-* Error cases
-
-Use dependency injection where it makes testing substantially easier.
-
-Do not create abstractions solely for the sake of achieving test coverage.
-
----
-
-# Dependencies
-
-Before adding a dependency:
-
-1. Check whether the standard library is sufficient.
-2. Check whether the dependency is actively maintained.
-3. Check whether it solves a meaningful problem.
-4. Keep the dependency surface small.
-
-Prefer well-established Go libraries when a dependency is justified.
-
----
-
-# Development Commands
-
-The project should remain compatible with standard Go tooling.
-
-Run:
-
-```bash
-go fmt ./...
+```text
+User Prompt
+     ↓
+Build Request
+     ↓
+Send Request to LLM
+     ↓
+Does the LLM request a tool?
+     ├── No → Return Response
+     │
+     └── Yes
+           ↓
+       Execute Tool
+           ↓
+       Add Tool Result
+           ↓
+       Send Request Again
+           ↓
+         Repeat
 ```
 
-Run tests:
+The LLM decides when a tool is needed.
+
+Noryn is responsible for:
+
+* exposing available tools
+* validating tool calls
+* executing tools
+* returning tool results to the LLM
+* continuing the agent loop
+
+---
+
+## Tools
+
+### Filesystem
+
+Filesystem tools currently provide:
+
+* file reading
+* file writing
+* directory listing
+
+Filesystem paths are resolved relative to the discovered project root.
+
+Tools must not access paths outside the project root.
+
+### Search
+
+The search tool:
+
+* searches text recursively
+* supports a file or directory as the search scope
+* skips common irrelevant directories such as `.git`, `node_modules`, and `vendor`
+* skips binary files
+* skips files larger than the configured search limit
+* limits the number of returned matches
+
+Search is intended to help the agent locate relevant code before reading or modifying files.
+
+### Shell
+
+The shell tool executes commands from the project root.
+
+Shell output and command errors are returned to the agent.
+
+Shell execution must remain transparent.
+
+Do not silently execute commands that were not requested or generated by the agent.
+
+### Git
+
+Current Git capabilities:
+
+* `git_status`
+* `git_diff`
+* `git_log`
+
+Current Git tools are read-oriented and do not modify Git history.
+
+Git modification capabilities such as `add` and `commit` may be added later.
+
+---
+
+## Configuration
+
+Configuration is loaded from `.env`.
+
+Current configuration variables include:
+
+```text
+NORYN_PROVIDER
+NORYN_MODEL
+OPENAI_API_KEY
+OPENROUTER_API_KEY
+```
+
+CLI flags can override the configured provider and model:
 
 ```bash
+go run ./cmd/noryn --provider <provider> --model <model> "<prompt>"
+```
+
+API keys must never be committed to Git or included directly in source code.
+
+---
+
+## Testing
+
+Every meaningful change should have appropriate tests.
+
+Useful development commands:
+
+```bash
+gofmt -w .
 go test ./...
-```
-
-Build:
-
-```bash
 go build ./...
 ```
 
-Run the application during development:
+Tests currently cover:
 
-```bash
-go run ./cmd/noryn
-```
+* agent behavior
+* tool registration
+* tool execution
+* tool errors
+* filesystem tools
+* search
+* Git tools
+* OpenAI provider behavior
+* instructions loading
 
----
-
-# Development Roadmap
-
-Noryn should be developed incrementally.
-
-## Phase 1 — Basic CLI
-
-* [ ] CLI entry point
-* [ ] Interactive input
-* [ ] Basic output
-* [ ] Configuration
-
-## Phase 2 — LLM Integration
-
-* [ ] LLM client abstraction
-* [ ] Provider implementation
-* [ ] Chat requests
-* [ ] Response handling
-* [ ] Streaming
-
-## Phase 3 — Agent Loop
-
-* [ ] Agent state
-* [ ] Message history
-* [ ] LLM → tool decision
-* [ ] Tool execution
-* [ ] Tool results
-* [ ] Iterative execution
-
-## Phase 4 — Development Tools
-
-* [ ] Read files
-* [ ] List directories
-* [ ] Search code
-* [ ] Write files
-* [ ] Edit files
-* [ ] Shell execution
-* [ ] Git integration
-
-## Phase 5 — Context
-
-* [ ] Project discovery
-* [ ] Relevant file selection
-* [ ] Context limits
-* [ ] Context pruning
-* [ ] Conversation management
-
-## Phase 6 — Safety
-
-* [ ] Tool permissions
-* [ ] Command approval
-* [ ] Destructive-operation confirmation
-* [ ] Clear execution display
-
-## Phase 7 — Advanced Agent Capabilities
-
-* [ ] Multiple LLM providers
-* [ ] Better codebase indexing
-* [ ] Improved context selection
-* [ ] Session persistence
-* [ ] Agent configuration
-* [ ] Tool extensibility
+Provider-specific behavior should preferably be tested with deterministic HTTP test servers rather than relying on live API calls.
 
 ---
 
-# Important Rules for the Coding Agent
+## Development Rules
 
-When working on Noryn:
-
-1. Read this file before making architectural changes.
-2. Inspect existing code before modifying it.
-3. Do not rewrite working code unnecessarily.
-4. Do not introduce ML/DL functionality unless explicitly requested.
-5. Do not add Python as a runtime dependency.
-6. Keep the core implementation in Go.
-7. Prefer the standard library when practical.
-8. Keep packages focused.
-9. Avoid premature abstractions.
-10. Never hide shell commands from the user.
-11. Never silently destroy user data or existing Git changes.
-12. Run tests after meaningful changes.
-13. Do not claim success without verification.
-14. Keep changes focused on the requested task.
-15. Update documentation when architectural behavior changes.
+* Inspect existing code before modifying it.
+* Make focused changes.
+* Preserve existing behavior unless the task requires changing it.
+* Add tests for new behavior.
+* Run tests after meaningful changes.
+* Format Go code.
+* Keep error messages useful.
+* Prefer explicit and simple implementations.
+* Avoid premature abstractions.
+* Do not introduce ML/DL functionality unless explicitly required.
+* Do not add Python as a runtime dependency unless explicitly required.
+* Do not silently modify or destroy user data.
+* Do not silently modify Git history.
+* Do not rewrite working code unnecessarily.
 
 ---
 
-# Long-Term Vision
+## Current State
 
-Noryn should become a capable, extensible AI coding environment that runs directly in the terminal.
+Noryn currently has the foundation of a functional terminal AI coding agent.
 
-The long-term architecture should allow:
+Implemented:
 
-```text
-                    Noryn
-                      │
-              ┌───────┴───────┐
-              │               │
-            Agent             TUI
-              │
-       ┌──────┼──────┐
-       │      │      │
-      LLM   Tools  Context
-       │      │      │
-       │      │      ├── Project
-       │      │      ├── Files
-       │      │      └── History
-       │      │
-       │      ├── Filesystem
-       │      ├── Search
-       │      ├── Shell
-       │      └── Git
-       │
-       └── Multiple Providers
-```
+* LLM abstraction
+* Agent loop
+* Fake LLM provider
+* OpenAI provider
+* OpenRouter provider
+* Provider selection
+* CLI provider and model flags
+* Project discovery
+* Safe project path resolution
+* Project instructions loading through `AGENTS.md`
+* File reading
+* File writing
+* Directory listing
+* Shell execution
+* Recursive text search
+* Binary-file detection
+* Search file-size limits
+* Search result limits
+* Git status
+* Git diff
+* Git log
+* Tool definitions
+* Tool error handling
+* Automated tests
 
-Noryn should remain primarily a **Go software engineering project with AI capabilities**, not a machine learning research project.
+The current focus is improving context management and agent reliability.
+
+---
+
+## Roadmap
+
+Potential future work:
+
+1. Improve context management.
+2. Add conversation history.
+3. Improve tool-result handling.
+4. Add safer file editing capabilities.
+5. Add tool execution permissions and confirmations where appropriate.
+6. Improve CLI and TUI interaction.
+7. Add additional LLM providers.
+8. Improve agent reliability and testing.
+9. Add more advanced project understanding.
+10. Add Git modification capabilities carefully.
+
+---
+
+## Important
+
+Noryn is an AI coding agent, not an AI model.
+
+The project should focus on:
+
+* agent orchestration
+* context management
+* LLM integration
+* tool calling
+* project understanding
+* safe code modification
+* testing
+* developer experience
+* reliability
+
+Do not turn Noryn into an ML/DL training framework unless that becomes an explicit project requirement.
