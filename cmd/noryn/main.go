@@ -71,7 +71,7 @@ func main() {
 			Messages: []llm.Message{
 				{
 					Role:    "user",
-					Content: projectInstructions + "\n\n" + prompt,
+					Content: instructions.BuildPrompt(projectInstructions, prompt),
 				},
 			},
 		},
