@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/alexnakagama/noryn/internal/agent"
 	"github.com/alexnakagama/noryn/internal/llm"
+	"github.com/alexnakagama/noryn/internal/llm/providers/fake"
 	"github.com/alexnakagama/noryn/internal/llm/providers/openai"
 	"github.com/alexnakagama/noryn/internal/project"
 	"github.com/alexnakagama/noryn/internal/tools"
@@ -15,8 +17,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env")
-	if err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal("error loading .env file")
 	}
 
@@ -25,16 +26,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		log.Fatal("OPENAI_API_KEY is not set")
+	fakeMode := flag.Bool("fake", false, "use the fake LLM provider")
+	model := flag.String("model", "gpt-5", "model to use")
+
+	flag.Parse()
+
+	if flag.NArg() < 1 {
+		log.Fatal("usage: noryn [--fake] [--model MODEL] <prompt>")
 	}
 
-	if len(os.Args) < 2 {
-		log.Fatal("usage: noryn <prompt>")
-	}
+	prompt := flag.Arg(0)
 
-	client := openai.NewClient(apiKey)
+	var client llm.Client
+
+	if *fakeMode {
+		client = fake.NewClient()
+	} else {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		if apiKey == "" {
+			log.Fatal("OPENAI_API_KEY is not set")
+		}
+
+		client = openai.NewClient(apiKey)
+	}
 
 	agent := agent.New(
 		client,
@@ -48,12 +63,10 @@ func main() {
 		tools.NewGitLogTool(project),
 	)
 
-	prompt := os.Args[1]
-
 	response, err := agent.Chat(
 		context.Background(),
 		llm.Request{
-			Model: "gpt-5",
+			Model: *model,
 			Messages: []llm.Message{
 				{
 					Role:    "user",
