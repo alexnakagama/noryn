@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/alexnakagama/noryn/internal/llm"
@@ -130,7 +131,13 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return llm.Response{}, fmt.Errorf("openai returned status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+
+		return llm.Response{}, fmt.Errorf(
+			"openai returned status %d: %s",
+			resp.StatusCode,
+			string(body),
+		)
 	}
 
 	var result response

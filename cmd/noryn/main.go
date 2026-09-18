@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/alexnakagama/noryn/internal/agent"
+	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/llm/providers/openai"
 	"github.com/alexnakagama/noryn/internal/project"
 	"github.com/alexnakagama/noryn/internal/tools"
@@ -27,6 +30,10 @@ func main() {
 		log.Fatal("OPENAI_API_KEY is not set")
 	}
 
+	if len(os.Args) < 2 {
+		log.Fatal("usage: noryn <prompt>")
+	}
+
 	client := openai.NewClient(apiKey)
 
 	agent := agent.New(
@@ -41,7 +48,24 @@ func main() {
 		tools.NewGitLogTool(project),
 	)
 
-	_ = agent
+	prompt := os.Args[1]
 
-	log.Println("noryn initialized")
+	response, err := agent.Chat(
+		context.Background(),
+		llm.Request{
+			Model: "gpt-5",
+			Messages: []llm.Message{
+				{
+					Role:    "user",
+					Content: prompt,
+				},
+			},
+		},
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(response.Message.Content)
 }
