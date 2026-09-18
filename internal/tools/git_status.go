@@ -5,3 +5,9 @@ import "github.com/alexnakagama/noryn/internal/project"
 type GitStatusTool struct {
 	project *project.Project
 }
+
+func NewGitStatusTool(project *project.Project) *GitStatusTool {
+	return &GitStatusTool{
+		project: project,
+	}
+}
