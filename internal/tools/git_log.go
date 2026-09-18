@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/project"
 )
 
@@ -25,6 +26,27 @@ func NewGitLogTool(project *project.Project) *GitLogTool {
 
 func (t *GitLogTool) Name() string {
 	return "git_log"
+}
+
+func (t *GitLogTool) Description() string {
+	return "Show the recent Git commit history of the project."
+}
+
+func (t *GitLogTool) Definition() llm.ToolDefinition {
+	return llm.ToolDefinition{
+		Name:        t.Name(),
+		Description: t.Description(),
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"limit": map[string]any{
+					"type":        "integer",
+					"description": "Maximum number of commits to show. Must be between 1 and 50.",
+				},
+			},
+			"required": []string{"limit"},
+		},
+	}
 }
 
 func (t *GitLogTool) Execute(arguments string) (string, error) {
