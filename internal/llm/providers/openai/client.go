@@ -126,6 +126,21 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error
 	}
 
 	for _, output := range result.Output {
+		if output.Type == "function_call" {
+			return llm.Response{
+				Message: llm.Message{
+					Role: "assistant",
+				},
+				ToolCalls: []llm.ToolCall{
+					{
+						ID:        output.CallID,
+						Name:      output.Name,
+						Arguments: output.Arguments,
+					},
+				},
+			}, nil
+		}
+
 		for _, content := range output.Content {
 			if content.Type == "output_text" {
 				return llm.Response{
