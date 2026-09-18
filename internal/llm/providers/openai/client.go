@@ -56,6 +56,21 @@ type content struct {
 	Text string `json:"text"`
 }
 
+func convertTools(definitions []llm.ToolDefinition) []tool {
+	tools := make([]tool, 0, len(definitions))
+
+	for _, definition := range definitions {
+		tools = append(tools, tool{
+			Type:        "function",
+			Name:        definition.Name,
+			Description: definition.Description,
+			Parameters:  definition.Parameters,
+		})
+	}
+
+	return tools
+}
+
 func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error) {
 	inputs := make([]input, 0, len(req.Messages))
 
