@@ -548,3 +548,91 @@ func TestRecentHistoryPreservesToolCallTurn(t *testing.T) {
 		)
 	}
 }
+
+func TestRecentHistoryPreservesMultipleToolCalls(t *testing.T) {
+	history := make([]llm.Message, 0, 103)
+
+	for i := 0; i < 100; i++ {
+		history = append(history, llm.Message{
+			Role:    "user",
+			Content: fmt.Sprintf("message-%d", i),
+		})
+	}
+
+	history = append(history,
+		llm.Message{
+			Role:    "assistant",
+			Content: "I need to run two commands.",
+			ToolCalls: []llm.ToolCall{
+				{
+					ID:   "call-1",
+					Name: "shell",
+				},
+				{
+					ID:   "call-2",
+					Name: "shell",
+				},
+			},
+		},
+		llm.Message{
+			Role:       "tool",
+			Content:    "result-1",
+			ToolCallID: "call-1",
+		},
+		llm.Message{
+			Role:       "tool",
+			Content:    "result-2",
+			ToolCallID: "call-2",
+		},
+	)
+
+	got := recentHistory(history)
+
+	if len(got) != 100 {
+		t.Fatalf(
+			"recentHistory() returned %d messages, want %d",
+			len(got),
+			100,
+		)
+	}
+
+	if len(got[97].ToolCalls) != 2 {
+		t.Fatalf(
+			"assistant has %d tool calls, want %d",
+			len(got[97].ToolCalls),
+			2,
+		)
+	}
+
+	if got[97].ToolCalls[0].ID != "call-1" {
+		t.Errorf(
+			"first tool call ID = %q, want %q",
+			got[97].ToolCalls[0].ID,
+			"call-1",
+		)
+	}
+
+	if got[97].ToolCalls[1].ID != "call-2" {
+		t.Errorf(
+			"second tool call ID = %q, want %q",
+			got[97].ToolCalls[1].ID,
+			"call-2",
+		)
+	}
+
+	if got[98].ToolCallID != "call-1" {
+		t.Errorf(
+			"first tool result ToolCallID = %q, want %q",
+			got[98].ToolCallID,
+			"call-1",
+		)
+	}
+
+	if got[99].ToolCallID != "call-2" {
+		t.Errorf(
+			"second tool result ToolCallID = %q, want %q",
+			got[99].ToolCallID,
+			"call-2",
+		)
+	}
+}
