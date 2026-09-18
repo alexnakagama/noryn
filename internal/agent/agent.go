@@ -39,6 +39,7 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		}
 
 		if len(response.ToolCalls) == 0 {
+			a.history = append(a.history, response.Message)
 			return response, nil
 		}
 

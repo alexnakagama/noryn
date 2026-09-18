@@ -311,3 +311,70 @@ func TestChatSendsToolDefinitions(t *testing.T) {
 		t.Errorf("tool description = %q, want %q", got.Description, "A fake tool for testing.")
 	}
 }
+
+func TestChatPreservesHistoryBetweenCalls(t *testing.T) {
+	client := &stubClient{
+		responses: []llm.Response{
+			{
+				Message: llm.Message{
+					Role:    "assistant",
+					Content: "first response",
+				},
+			},
+			{
+				Message: llm.Message{
+					Role:    "assistant",
+					Content: "second response",
+				},
+			},
+		},
+	}
+
+	agent := New(client)
+
+	_, err := agent.Chat(context.Background(), llm.Request{
+		Messages: []llm.Message{
+			{
+				Role:    "user",
+				Content: "first message",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("first Chat() error = %v", err)
+	}
+
+	_, err = agent.Chat(context.Background(), llm.Request{
+		Messages: []llm.Message{
+			{
+				Role:    "user",
+				Content: "second message",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("second Chat() error = %v", err)
+	}
+
+	if len(client.requests) != 2 {
+		t.Fatalf("got %d requests, want 2", len(client.requests))
+	}
+
+	history := client.requests[1].Messages
+
+	if len(history) != 3 {
+		t.Fatalf("got %d messages in history, want 3", len(history))
+	}
+
+	if history[0].Content != "first message" {
+		t.Errorf("history[0] = %q, want %q", history[0].Content, "first message")
+	}
+
+	if history[1].Content != "first response" {
+		t.Errorf("history[1] = %q, want %q", history[1].Content, "first response")
+	}
+
+	if history[2].Content != "second message" {
+		t.Errorf("history[2] = %q, want %q", history[2].Content, "second message")
+	}
+}
