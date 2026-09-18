@@ -19,6 +19,7 @@ func main() {
 		&tools.ReadFileTool{},
 		&tools.ListDirectoryTool{},
 		&tools.WriteFileTool{},
+		&tools.ShellTool{},
 	)
 
 	request := llm.Request{
