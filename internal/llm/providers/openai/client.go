@@ -38,8 +38,8 @@ type tool struct {
 }
 
 type input struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string `json:"role,omitempty"`
+	Content string `json:"content,omitempty"`
 
 	Type   string `json:"type,omitempty"`
 	CallID string `json:"call_id,omitempty"`
