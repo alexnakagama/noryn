@@ -26,3 +26,6 @@ func FindRoot(start string) (string, error) {
 		current = parent
 	}
 }
+
+func Discover(start string) (*Project, error) {
+}
