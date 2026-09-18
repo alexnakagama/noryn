@@ -19,3 +19,5 @@ func NewGitDiffTool(project *project.Project) *GitDiffTool {
 func (t *GitDiffTool) Name() string {
 	return "git_diff"
 }
+
+func (t *GitDiffTool) Execute(arguments string) (string, error) {}
