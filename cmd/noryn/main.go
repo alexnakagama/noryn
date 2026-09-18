@@ -25,11 +25,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	provider := flag.String("provider", cfg.Provider, "LLM provider")
+	model := flag.String("model", cfg.Model, "LLM model")
+
 	flag.Parse()
 
 	if flag.NArg() < 1 {
-		log.Fatal("usage: noryn <prompt>")
+		log.Fatal("usage: noryn [--provider provider] [--model model] <prompt>")
 	}
+
+	cfg.Provider = *provider
+	cfg.Model = *model
 
 	prompt := flag.Arg(0)
 
