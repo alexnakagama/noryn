@@ -84,6 +84,7 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error
 	body := request{
 		Model: req.Model,
 		Input: inputs,
+		Tools: convertTools(req.Tools),
 	}
 
 	data, err := json.Marshal(body)
