@@ -42,7 +42,7 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		for _, call := range response.ToolCalls {
 			result, err := a.executeTool(call)
 			if err != nil {
-				return llm.Response{}, err
+				result = "tool error: " + err.Error()
 			}
 
 			request.Messages = append(request.Messages, llm.Message{
