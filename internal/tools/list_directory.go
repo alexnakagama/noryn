@@ -16,6 +16,12 @@ type listDirectoryArguments struct {
 	Path string `json:"path"`
 }
 
+func NewListDirectoryTool(project *project.Project) *ListDirectoryTool {
+	return &ListDirectoryTool{
+		project: project,
+	}
+}
+
 func (t *ListDirectoryTool) Name() string {
 	return "list_directory"
 }
