@@ -15,6 +15,12 @@ type readFileArguments struct {
 	Path string `json:"path"`
 }
 
+func NewReadFileTool(project *project.Project) *ReadFileTool {
+	return &ReadFileTool{
+		project: project,
+	}
+}
+
 func (t *ReadFileTool) Name() string {
 	return "read_file"
 }
