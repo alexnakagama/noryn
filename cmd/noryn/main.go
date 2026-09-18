@@ -1,45 +1,17 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 
-	"github.com/alexnakagama/noryn/internal/agent"
-	"github.com/alexnakagama/noryn/internal/llm"
-	"github.com/alexnakagama/noryn/internal/llm/providers/fake"
-	"github.com/alexnakagama/noryn/internal/tools"
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
 func main() {
-	client := fake.NewClient()
-
-	agent := agent.New(
-		client,
-		&tools.ReadFileTool{},
-		&tools.ListDirectoryTool{},
-		&tools.WriteFileTool{},
-		&tools.ShellTool{},
-	)
-
-	request := llm.Request{
-		Model: "fake",
-		Messages: []llm.Message{
-			{
-				Role:    "user",
-				Content: "Read cmd/noryn/main.go",
-			},
-		},
-	}
-
-	response, err := agent.Chat(context.Background(), request)
+	project, err := project.Discover(".")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("response received")
-
-	fmt.Println("content:", response.Message.Content)
-
-	fmt.Println(response.Message.Content)
+	fmt.Println("project root: ", project.Root)
 }
