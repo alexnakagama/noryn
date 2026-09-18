@@ -5,3 +5,5 @@ type Config struct {
 	Model    string
 	APIKey   string
 }
+
+func Load() (*Config, error) {}
