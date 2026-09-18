@@ -8,6 +8,7 @@ import (
 
 	"github.com/alexnakagama/noryn/internal/agent"
 	"github.com/alexnakagama/noryn/internal/config"
+	"github.com/alexnakagama/noryn/internal/instructions"
 	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/llm/providers"
 	"github.com/alexnakagama/noryn/internal/project"
@@ -21,6 +22,13 @@ func main() {
 	}
 
 	project, err := project.Discover(".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	instructionsBuilder := instructions.NewBuilder(project)
+
+	projectInstructions, err := instructionsBuilder.Build()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,7 +71,7 @@ func main() {
 			Messages: []llm.Message{
 				{
 					Role:    "user",
-					Content: prompt,
+					Content: projectInstructions + "\n\n" + prompt,
 				},
 			},
 		},
