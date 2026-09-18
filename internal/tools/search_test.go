@@ -51,9 +51,18 @@ func TestSearchTool_Execute(t *testing.T) {
 			setup: func(t *testing.T, root string) {
 				t.Helper()
 
-				createSearchFile(t, root, "needle-dir/inner.txt", "a needle in the haystack\n")
+				createSearchFile(
+					t,
+					root,
+					"needle-dir/inner.txt",
+					"a needle in the haystack\n",
+				)
 			},
-			want: searchMatch(filepath.Join("needle-dir", "inner.txt"), 1, "a needle in the haystack"),
+			want: searchMatch(
+				filepath.Join("needle-dir", "inner.txt"),
+				1,
+				"a needle in the haystack",
+			),
 		},
 		{
 			name: "query is case sensitive",
@@ -63,6 +72,88 @@ func TestSearchTool_Execute(t *testing.T) {
 		{
 			name: "query with no matches returns an empty result",
 			args: `{"query":"absent","path":"."}`,
+			want: "",
+		},
+		{
+			name: "ignores binary files",
+			args: `{"query":"SECRET","path":"."}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				path := filepath.Join(root, "image.bin")
+
+				data := []byte{
+					0x00,
+					0x01,
+					0x02,
+					'S',
+					'E',
+					'C',
+					'R',
+					'E',
+					'T',
+				}
+
+				if err := os.WriteFile(path, data, 0644); err != nil {
+					t.Fatalf("os.WriteFile(%q) error = %v", path, err)
+				}
+			},
+			want: "",
+		},
+		{
+			name: "ignores .git directory",
+			args: `{"query":"SECRET","path":"."}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				createSearchFile(
+					t,
+					root,
+					".git/config",
+					"SECRET=should not be found\n",
+				)
+
+				createSearchFile(
+					t,
+					root,
+					"config.txt",
+					"SECRET=should be found\n",
+				)
+			},
+			want: searchMatch(
+				"config.txt",
+				1,
+				"SECRET=should be found",
+			),
+		},
+		{
+			name: "ignores node_modules directory",
+			args: `{"query":"SECRET","path":"."}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				createSearchFile(
+					t,
+					root,
+					"node_modules/package/index.js",
+					"SECRET=should not be found\n",
+				)
+			},
+			want: "",
+		},
+		{
+			name: "ignores vendor directory",
+			args: `{"query":"SECRET","path":"."}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				createSearchFile(
+					t,
+					root,
+					"vendor/package/file.go",
+					"SECRET=should not be found\n",
+				)
+			},
 			want: "",
 		},
 		{
@@ -102,7 +193,9 @@ func TestSearchTool_Execute(t *testing.T) {
 				tt.setup(t, root)
 			}
 
-			tool := NewSearchTool(&project.Project{Root: root})
+			tool := NewSearchTool(&project.Project{
+				Root: root,
+			})
 
 			got, err := tool.Execute(tt.args)
 
@@ -110,6 +203,7 @@ func TestSearchTool_Execute(t *testing.T) {
 				if err == nil {
 					t.Fatal("Execute() error = nil, want an error")
 				}
+
 				return
 			}
 
@@ -127,25 +221,60 @@ func TestSearchTool_Execute(t *testing.T) {
 func createSearchFixtures(t *testing.T, root string) {
 	t.Helper()
 
-	createSearchFile(t, root, "README.md", "# Noryn\n\nTODO: document the tool\n")
-	createSearchFile(t, root, "main.go", "package main\n\nfunc main() {\n\t// TODO: greet\n}\n")
-	createSearchFile(t, root, "sub/helper.go", "package sub\n\n// TODO: implement helper\n")
+	createSearchFile(
+		t,
+		root,
+		"README.md",
+		"# Noryn\n\nTODO: document the tool\n",
+	)
+
+	createSearchFile(
+		t,
+		root,
+		"main.go",
+		"package main\n\nfunc main() {\n\t// TODO: greet\n}\n",
+	)
+
+	createSearchFile(
+		t,
+		root,
+		"sub/helper.go",
+		"package sub\n\n// TODO: implement helper\n",
+	)
 }
 
-func createSearchFile(t *testing.T, root, relativePath, content string) {
+func createSearchFile(
+	t *testing.T,
+	root string,
+	relativePath string,
+	content string,
+) {
 	t.Helper()
 
 	path := filepath.Join(root, relativePath)
 
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatalf("os.MkdirAll(%q) error = %v", filepath.Dir(path), err)
+		t.Fatalf(
+			"os.MkdirAll(%q) error = %v",
+			filepath.Dir(path),
+			err,
+		)
 	}
 
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatalf("os.WriteFile(%q) error = %v", path, err)
+		t.Fatalf(
+			"os.WriteFile(%q) error = %v",
+			path,
+			err,
+		)
 	}
 }
 
 func searchMatch(path string, lineNumber int, line string) string {
-	return fmt.Sprintf("%s:%d:%s\n", path, lineNumber, line)
+	return fmt.Sprintf(
+		"%s:%d:%s\n",
+		path,
+		lineNumber,
+		line,
+	)
 }
