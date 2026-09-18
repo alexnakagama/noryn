@@ -19,6 +19,12 @@ type searchArguments struct {
 	Path  string `json:"path"`
 }
 
+var ignoredDirectories = map[string]bool{
+	".git":         true,
+	"node_modules": true,
+	"vendor":       true,
+}
+
 func NewSearchTool(project *project.Project) *SearchTool {
 	return &SearchTool{
 		project: project,
@@ -58,6 +64,10 @@ func (t *SearchTool) Execute(arguments string) (string, error) {
 		}
 
 		if entry.IsDir() {
+			if ignoredDirectories[entry.Name()] {
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 
@@ -66,23 +76,23 @@ func (t *SearchTool) Execute(arguments string) (string, error) {
 			return nil
 		}
 
-		content := string(data)
-
-		for lineNumber, line := range strings.Split(content, "\n") {
-			if strings.Contains(line, args.Query) {
-				relativePath, err := filepath.Rel(t.project.Root, path)
-				if err != nil {
-					return err
-				}
-
-				fmt.Fprintf(
-					&result,
-					"%s:%d:%s\n",
-					relativePath,
-					lineNumber+1,
-					line,
-				)
+		for lineNumber, line := range strings.Split(string(data), "\n") {
+			if !strings.Contains(line, args.Query) {
+				continue
 			}
+
+			relativePath, err := filepath.Rel(t.project.Root, path)
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprintf(
+				&result,
+				"%s:%d:%s\n",
+				relativePath,
+				lineNumber+1,
+				line,
+			)
 		}
 
 		return nil
