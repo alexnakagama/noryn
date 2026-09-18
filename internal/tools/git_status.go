@@ -12,4 +12,6 @@ func NewGitStatusTool(project *project.Project) *GitStatusTool {
 	}
 }
 
-func (t *GitStatusTool) Name() string {}
+func (t *GitStatusTool) Name() string {
+	return "git_status"
+}
