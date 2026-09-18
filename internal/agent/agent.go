@@ -8,6 +8,16 @@ import (
 	"github.com/alexnakagama/noryn/internal/tools"
 )
 
+const maxToolResultLength = 10_000
+
+func truncateToolResult(result string) string {
+	if len(result) <= maxToolResultLength {
+		return result
+	}
+
+	return result[:maxToolResultLength] + "\n[tool result truncated]"
+}
+
 type Agent struct {
 	client  llm.Client
 	tools   map[string]tools.Tool
