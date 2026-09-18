@@ -10,3 +10,5 @@ type writeFileArguments struct {
 func (t *WriteFileTool) Name() string {
 	return "write_file"
 }
+
+func (t *WriteFileTool) Execute(arguments string) (string, error) {}
