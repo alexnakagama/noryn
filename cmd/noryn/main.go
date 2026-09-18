@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/alexnakagama/noryn/internal/agent"
 	"github.com/alexnakagama/noryn/internal/config"
@@ -38,14 +41,8 @@ func main() {
 
 	flag.Parse()
 
-	if flag.NArg() < 1 {
-		log.Fatal("usage: noryn [--provider provider] [--model model] <prompt>")
-	}
-
 	cfg.Provider = *provider
 	cfg.Model = *model
-
-	prompt := flag.Arg(0)
 
 	client, err := providers.New(*cfg)
 	if err != nil {
@@ -64,22 +61,52 @@ func main() {
 		tools.NewGitLogTool(project),
 	)
 
-	response, err := agent.Chat(
-		context.Background(),
-		llm.Request{
-			Model: cfg.Model,
-			Messages: []llm.Message{
-				{
-					Role:    "user",
-					Content: instructions.BuildPrompt(projectInstructions, prompt),
+	scanner := bufio.NewScanner(os.Stdin)
+
+	fmt.Println("Noryn")
+	fmt.Println("Type 'exit' to quit.")
+	fmt.Println()
+
+	for {
+		fmt.Print("noryn> ")
+
+		if !scanner.Scan() {
+			break
+		}
+
+		prompt := strings.TrimSpace(scanner.Text())
+
+		if prompt == "" {
+			continue
+		}
+
+		if prompt == "exit" {
+			break
+		}
+
+		response, err := agent.Chat(
+			context.Background(),
+			llm.Request{
+				Model: cfg.Model,
+				Messages: []llm.Message{
+					{
+						Role:    "user",
+						Content: instructions.BuildPrompt(projectInstructions, prompt),
+					},
 				},
 			},
-		},
-	)
+		)
 
-	if err != nil {
-		log.Fatal(err)
+		if err != nil {
+			fmt.Println("Error:", err)
+			continue
+		}
+
+		fmt.Println(response.Message.Content)
+		fmt.Println()
 	}
 
-	fmt.Println(response.Message.Content)
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
 }
