@@ -18,7 +18,7 @@ func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, e
 			Role:    "assistant",
 			Content: "I need to read a file.",
 		},
-		ToolCall: []llm.ToolCall{
+		ToolCalls: []llm.ToolCall{
 			{
 				ID:        "call-1",
 				Name:      "read_file",

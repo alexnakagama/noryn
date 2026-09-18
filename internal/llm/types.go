@@ -13,8 +13,8 @@ type Request struct {
 }
 
 type Response struct {
-	Message  Message
-	ToolCall []ToolCall
+	Message   Message
+	ToolCalls []ToolCall
 }
 
 type ToolCall struct {

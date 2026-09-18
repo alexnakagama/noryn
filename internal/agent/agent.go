@@ -27,7 +27,31 @@ func New(client llm.Client, toolList ...tools.Tool) *Agent {
 }
 
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
-	return a.client.Chat(ctx, request)
+	for {
+		response, err := a.client.Chat(ctx, request)
+		if err != nil {
+			return llm.Response{}, err
+		}
+
+		if len(response.ToolCalls) == 0 {
+			return response, nil
+		}
+
+		request.Messages = append(request.Messages, response.Message)
+
+		for _, call := range response.ToolCalls {
+			result, err := a.executeTool(call)
+			if err != nil {
+				return llm.Response{}, err
+			}
+
+			request.Messages = append(request.Messages, llm.Message{
+				Role:       "tool",
+				Content:    result,
+				ToolCallID: call.ID,
+			})
+		}
+	}
 }
 
 func (a *Agent) executeTool(call llm.ToolCall) (string, error) {
