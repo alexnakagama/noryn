@@ -50,3 +50,11 @@ type toolFunction struct {
 	Description string         `json:"description"`
 	Parameters  map[string]any `json:"parameters"`
 }
+
+type response struct {
+	Choices []choice `json:"choices"`
+}
+
+type choice struct {
+	Message message `json:"message"`
+}
