@@ -20,3 +20,5 @@ func NewSearchTool(project *project.Project) *SearchTool {
 func (t *SearchTool) Name() string {
 	return "search"
 }
+
+func (t *SearchTool) Execute(arguements string) (string, error) {}
