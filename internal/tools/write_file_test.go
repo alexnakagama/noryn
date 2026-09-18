@@ -1,14 +1,16 @@
 package tools
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
 func TestWriteFileTool_Name(t *testing.T) {
 	tool := WriteFileTool{}
+
 	got := tool.Name()
 
 	if got != "write_file" {
@@ -20,27 +22,23 @@ func TestWriteFileTool_Execute(t *testing.T) {
 	tests := []struct {
 		name        string
 		args        string
-		needsPath   bool
 		seed        func(t *testing.T, path string)
 		wantContent string
 		wantErr     bool
 	}{
 		{
 			name:        "creates a new file with the given content",
-			args:        `{"path":"%s","content":"hello\nworld"}`,
-			needsPath:   true,
+			args:        `{"path":"output.txt","content":"hello\nworld"}`,
 			wantContent: "hello\nworld",
 		},
 		{
 			name:        "creates an empty file",
-			args:        `{"path":"%s","content":""}`,
-			needsPath:   true,
+			args:        `{"path":"output.txt","content":""}`,
 			wantContent: "",
 		},
 		{
-			name:      "overwrites an existing file",
-			args:      `{"path":"%s","content":"new content"}`,
-			needsPath: true,
+			name: "overwrites an existing file",
+			args: `{"path":"output.txt","content":"new content"}`,
 			seed: func(t *testing.T, path string) {
 				t.Helper()
 				createDestinationFile(t, path, "old content")
@@ -48,11 +46,11 @@ func TestWriteFileTool_Execute(t *testing.T) {
 			wantContent: "new content",
 		},
 		{
-			name:      "directory target returns an error",
-			args:      `{"path":"%s","content":"x"}`,
-			needsPath: true,
+			name: "directory target returns an error",
+			args: `{"path":"output.txt","content":"x"}`,
 			seed: func(t *testing.T, path string) {
 				t.Helper()
+
 				if err := os.Mkdir(path, 0755); err != nil {
 					t.Fatalf("os.Mkdir(%q) error = %v", path, err)
 				}
@@ -69,22 +67,30 @@ func TestWriteFileTool_Execute(t *testing.T) {
 			args:    "not-json",
 			wantErr: true,
 		},
+		{
+			name:    "path outside project returns an error",
+			args:    `{"path":"../outside.txt","content":"should fail"}`,
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "output.txt")
+			root := t.TempDir()
+
+			p := &project.Project{
+				Root: root,
+			}
+
+			path := filepath.Join(root, "output.txt")
+
 			if tt.seed != nil {
 				tt.seed(t, path)
 			}
 
-			args := tt.args
-			if tt.needsPath {
-				args = fmt.Sprintf(tt.args, path)
-			}
+			tool := NewWriteFileTool(p)
 
-			tool := WriteFileTool{}
-			got, err := tool.Execute(args)
+			got, err := tool.Execute(tt.args)
 
 			if tt.wantErr {
 				if err == nil {
@@ -96,16 +102,26 @@ func TestWriteFileTool_Execute(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Execute() error = %v", err)
 			}
+
 			if got != "file written successfully" {
-				t.Errorf("Execute() message = %q, want %q", got, "file written successfully")
+				t.Errorf(
+					"Execute() message = %q, want %q",
+					got,
+					"file written successfully",
+				)
 			}
 
 			content, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("os.ReadFile(%q) error = %v", path, err)
 			}
+
 			if string(content) != tt.wantContent {
-				t.Errorf("file content = %q, want %q", string(content), tt.wantContent)
+				t.Errorf(
+					"file content = %q, want %q",
+					string(content),
+					tt.wantContent,
+				)
 			}
 		})
 	}
