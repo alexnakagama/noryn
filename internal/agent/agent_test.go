@@ -510,21 +510,40 @@ func TestRecentHistoryPreservesToolCallTurn(t *testing.T) {
 		},
 	)
 
-	// We expect recentHistory to preserve the complete tool turn.
 	got := recentHistory(history)
 
 	if len(got) != 100 {
-		t.Fatalf("recentHistory() returned %d messages, want %d", len(got), 100)
+		t.Fatalf(
+			"recentHistory() returned %d messages, want %d",
+			len(got),
+			100,
+		)
 	}
 
-	if len(got[97].ToolCalls) != 1 {
+	if len(got[98].ToolCalls) != 1 {
 		t.Fatal("tool call was separated from its result")
 	}
 
-	if got[98].ToolCallID != "call-1" {
+	if got[98].ToolCalls[0].ID != "call-1" {
+		t.Errorf(
+			"tool call ID = %q, want %q",
+			got[98].ToolCalls[0].ID,
+			"call-1",
+		)
+	}
+
+	if got[99].Role != "tool" {
+		t.Errorf(
+			"last message role = %q, want %q",
+			got[99].Role,
+			"tool",
+		)
+	}
+
+	if got[99].ToolCallID != "call-1" {
 		t.Errorf(
 			"tool result ToolCallID = %q, want %q",
-			got[98].ToolCallID,
+			got[99].ToolCallID,
 			"call-1",
 		)
 	}
