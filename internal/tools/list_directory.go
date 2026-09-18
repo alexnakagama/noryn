@@ -3,6 +3,7 @@ package tools
 import (
 	"encoding/json"
 	"os"
+	"strings"
 )
 
 type ListDirectoryTool struct{}
@@ -28,11 +29,12 @@ func (t *ListDirectoryTool) Execute(arguments string) (string, error) {
 		return "", err
 	}
 
-	var result string
+	var result strings.Builder
 
 	for _, entry := range entries {
-		result += entry.Name() + "\n"
+		result.WriteString(entry.Name())
+		result.WriteByte('\n')
 	}
 
-	return result, nil
+	return result.String(), nil
 }
