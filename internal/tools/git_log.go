@@ -16,4 +16,6 @@ func NewGitLogTool(project *project.Project) *GitLogTool {
 	}
 }
 
-func (t *GitLogTool) Name() string {}
+func (t *GitLogTool) Name() string {
+	return "git_log"
+}
