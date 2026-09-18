@@ -5,3 +5,7 @@ import "github.com/alexnakagama/noryn/internal/project"
 type GitDiffTool struct {
 	project *project.Project
 }
+
+type gitDiffArguments struct {
+	Path string `json:"path"`
+}
