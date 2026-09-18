@@ -29,10 +29,12 @@ func Load() (*Config, error) {
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
+	openRouterAPIKey := os.Getenv("OPENROUTER_API_KEY")
 
 	return &Config{
-		Provider: provider,
-		Model:    model,
-		APIKey:   apiKey,
+		Provider:         provider,
+		Model:            model,
+		APIKey:           apiKey,
+		OpenRouterAPIKey: openRouterAPIKey,
 	}, nil
 }
