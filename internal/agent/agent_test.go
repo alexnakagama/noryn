@@ -481,3 +481,51 @@ func TestRecentHistoryKeepsRecentMessages(t *testing.T) {
 		)
 	}
 }
+
+func TestRecentHistoryPreservesToolCallTurn(t *testing.T) {
+	history := make([]llm.Message, 0, 102)
+
+	for i := 0; i < 100; i++ {
+		history = append(history, llm.Message{
+			Role:    "user",
+			Content: fmt.Sprintf("message-%d", i),
+		})
+	}
+
+	history = append(history,
+		llm.Message{
+			Role:    "assistant",
+			Content: "I need to run a command.",
+			ToolCalls: []llm.ToolCall{
+				{
+					ID:   "call-1",
+					Name: "shell",
+				},
+			},
+		},
+		llm.Message{
+			Role:       "tool",
+			Content:    "command output",
+			ToolCallID: "call-1",
+		},
+	)
+
+	// We expect recentHistory to preserve the complete tool turn.
+	got := recentHistory(history)
+
+	if len(got) != 100 {
+		t.Fatalf("recentHistory() returned %d messages, want %d", len(got), 100)
+	}
+
+	if len(got[97].ToolCalls) != 1 {
+		t.Fatal("tool call was separated from its result")
+	}
+
+	if got[98].ToolCallID != "call-1" {
+		t.Errorf(
+			"tool result ToolCallID = %q, want %q",
+			got[98].ToolCallID,
+			"call-1",
+		)
+	}
+}

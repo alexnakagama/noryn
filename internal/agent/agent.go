@@ -16,7 +16,13 @@ func recentHistory(history []llm.Message) []llm.Message {
 		return history
 	}
 
-	return history[len(history)-maxHistoryMessages:]
+	start := len(history) - maxHistoryMessages
+
+	for start < len(history) && history[start].Role == "tool" {
+		start--
+	}
+
+	return history[start:]
 }
 
 func truncateToolResult(result string) string {
