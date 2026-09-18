@@ -16,6 +16,12 @@ type writeFileArguments struct {
 	Content string `json:"content"`
 }
 
+func NewWriteFileTool(project *project.Project) *WriteFileTool {
+	return &WriteFileTool{
+		project: project,
+	}
+}
+
 func (t *WriteFileTool) Name() string {
 	return "write_file"
 }
