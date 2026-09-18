@@ -28,6 +28,8 @@ func New(client llm.Client, toolList ...tools.Tool) *Agent {
 }
 
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
+	a.history = append(a.history, request.Messages...)
+	request.Messages = a.history
 	request.Tools = a.toolDefinitions()
 
 	for {
@@ -40,7 +42,8 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 			return response, nil
 		}
 
-		request.Messages = append(request.Messages, response.Message)
+		a.history = append(a.history, response.Message)
+		request.Messages = a.history
 
 		for _, call := range response.ToolCalls {
 			result, err := a.executeTool(call)
@@ -48,11 +51,13 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 				result = "tool error: " + err.Error()
 			}
 
-			request.Messages = append(request.Messages, llm.Message{
+			a.history = append(a.history, llm.Message{
 				Role:       "tool",
 				Content:    result,
 				ToolCallID: call.ID,
 			})
+
+			request.Messages = a.history
 		}
 	}
 }
