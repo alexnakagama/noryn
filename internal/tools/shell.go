@@ -9,3 +9,5 @@ type shellArguments struct {
 func (t *ShellTool) Name() string {
 	return "shell"
 }
+
+func (t *ShellTool) Execute(arguments string) (string, error) {}
