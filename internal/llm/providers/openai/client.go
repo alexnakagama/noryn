@@ -83,6 +83,16 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error
 	inputs := make([]input, 0, len(req.Messages))
 
 	for _, message := range req.Messages {
+		if message.Role == "tool" {
+			inputs = append(inputs, input{
+				Type:   "function_call_output",
+				CallID: message.ToolCallID,
+				Output: message.Content,
+			})
+
+			continue
+		}
+
 		inputs = append(inputs, input{
 			Role:    message.Role,
 			Content: message.Content,
