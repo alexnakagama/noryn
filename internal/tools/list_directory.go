@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/project"
 )
 
@@ -24,6 +25,27 @@ func NewListDirectoryTool(project *project.Project) *ListDirectoryTool {
 
 func (t *ListDirectoryTool) Name() string {
 	return "list_directory"
+}
+
+func (t *ListDirectoryTool) Description() string {
+	return "List the files and directories inside a project directory."
+}
+
+func (t *ListDirectoryTool) Definition() llm.ToolDefinition {
+	return llm.ToolDefinition{
+		Name:        t.Name(),
+		Description: t.Description(),
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"path": map[string]any{
+					"type":        "string",
+					"description": "Directory path to list.",
+				},
+			},
+			"required": []string{"path"},
+		},
+	}
 }
 
 func (t *ListDirectoryTool) Execute(arguments string) (string, error) {
