@@ -28,4 +28,12 @@ func FindRoot(start string) (string, error) {
 }
 
 func Discover(start string) (*Project, error) {
+	root, err := FindRoot(start)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Project{
+		Root: root,
+	}, nil
 }
