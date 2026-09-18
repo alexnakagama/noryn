@@ -11,5 +11,7 @@ type gitDiffArguments struct {
 }
 
 func NewGitDiffTool(project *project.Project) *GitDiffTool {
-
+	return &GitDiffTool{
+		project: project,
+	}
 }
