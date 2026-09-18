@@ -47,7 +47,11 @@ type response struct {
 }
 
 type output struct {
-	Type    string    `json:"type"`
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+	CallID    string `json:"call_id"`
+
 	Content []content `json:"content"`
 }
 
