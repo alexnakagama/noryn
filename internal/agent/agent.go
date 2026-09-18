@@ -9,8 +9,9 @@ import (
 )
 
 type Agent struct {
-	client llm.Client
-	tools  map[string]tools.Tool
+	client  llm.Client
+	tools   map[string]tools.Tool
+	history []llm.Message
 }
 
 func New(client llm.Client, toolList ...tools.Tool) *Agent {
