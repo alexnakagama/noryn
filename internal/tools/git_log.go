@@ -9,3 +9,6 @@ type GitLogTool struct {
 type gitLogArguments struct {
 	Limit int `json:"limit"`
 }
+
+func NewGitLogTool(project *project.Project) *GitLogTool {
+}
