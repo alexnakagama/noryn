@@ -11,4 +11,8 @@ type searchArguments struct {
 	Path  string `json:"path"`
 }
 
-func NewSearchTool(project *project.Project) *SearchTool {}
+func NewSearchTool(project *project.Project) *SearchTool {
+	return &SearchTool{
+		project: project,
+	}
+}
