@@ -11,6 +11,9 @@ import (
 	"github.com/alexnakagama/noryn/internal/project"
 )
 
+const maxSearchFileSize = 1 * 1024 * 1024 // 1 MB
+const maxSearchResults = 200
+
 type SearchTool struct {
 	project *project.Project
 }
@@ -58,6 +61,7 @@ func (t *SearchTool) Execute(arguments string) (string, error) {
 	}
 
 	var result strings.Builder
+	resultCount := 0
 
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
@@ -69,6 +73,15 @@ func (t *SearchTool) Execute(arguments string) (string, error) {
 				return filepath.SkipDir
 			}
 
+			return nil
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			return nil
+		}
+
+		if info.Size() > maxSearchFileSize {
 			return nil
 		}
 
@@ -98,6 +111,12 @@ func (t *SearchTool) Execute(arguments string) (string, error) {
 				lineNumber+1,
 				line,
 			)
+
+			resultCount++
+
+			if resultCount >= maxSearchResults {
+				return filepath.SkipAll
+			}
 		}
 
 		return nil
