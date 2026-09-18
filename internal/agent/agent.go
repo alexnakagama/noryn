@@ -62,3 +62,5 @@ func (a *Agent) executeTool(call llm.ToolCall) (string, error) {
 
 	return tool.Execute(call.Arguments)
 }
+
+func (a *Agent) toolDefinitions() []llm.ToolDefinition {}
