@@ -7,4 +7,7 @@ type Builder struct {
 }
 
 func NewBuilder(project *project.Project) *Builder {
+	return &Builder{
+		project: project,
+	}
 }
