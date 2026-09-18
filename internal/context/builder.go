@@ -11,3 +11,5 @@ func NewBuilder(project *project.Project) *Builder {
 		project: project,
 	}
 }
+
+func (b *Builder) Build() (string, error) {}
