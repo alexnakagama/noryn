@@ -34,5 +34,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("response received")
+
+	fmt.Println("content:", response.Message.Content)
+
 	fmt.Println(response.Message.Content)
 }
