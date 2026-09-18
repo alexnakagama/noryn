@@ -3,14 +3,43 @@ package instructions
 import "testing"
 
 func TestBuildPrompt(t *testing.T) {
-	projectInstructions := "Follow the project instructions."
-	userPrompt := "Run the tests."
+	got := BuildPrompt(
+		"Be careful with files.",
+		"Project context here.",
+		"Read main.go",
+	)
 
-	want := "Follow the project instructions.\n\nRun the tests."
+	expected := "Be careful with files.\n\n" +
+		"Project context here.\n\n" +
+		"Read main.go"
 
-	got := BuildPrompt(projectInstructions, userPrompt)
+	if got != expected {
+		t.Errorf("BuildPrompt() = %q, want %q", got, expected)
+	}
+}
 
-	if got != want {
-		t.Fatalf("BuildPrompt() = %q, want %q", got, want)
+func TestBuildPromptWithProjectContext(t *testing.T) {
+	projectInstructions := "Be careful with files."
+	projectContext := "Project root: /tmp/noryn\nFiles:\n- main.go\n"
+	userPrompt := "Read main.go"
+
+	got := BuildPrompt(
+		projectInstructions,
+		projectContext,
+		userPrompt,
+	)
+
+	expected := "Be careful with files.\n\n" +
+		"Project root: /tmp/noryn\n" +
+		"Files:\n" +
+		"- main.go\n\n" +
+		"Read main.go"
+
+	if got != expected {
+		t.Errorf(
+			"BuildPrompt() = %q, want %q",
+			got,
+			expected,
+		)
 	}
 }

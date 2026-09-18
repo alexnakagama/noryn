@@ -1,5 +1,11 @@
 package instructions
 
-func BuildPrompt(projectInstructions, userPrompt string) string {
-	return projectInstructions + "\n\n" + userPrompt
+import "strings"
+
+func BuildPrompt(projectInstructions, projectContext, userPrompt string) string {
+	projectContext = strings.TrimRight(projectContext, "\n")
+
+	return projectInstructions + "\n\n" +
+		projectContext + "\n\n" +
+		userPrompt
 }
