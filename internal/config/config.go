@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	Provider string
-	Model    string
-	APIKey   string
+	Provider         string
+	Model            string
+	APIKey           string
+	OpenRouterAPIKey string
 }
 
 func Load() (*Config, error) {
