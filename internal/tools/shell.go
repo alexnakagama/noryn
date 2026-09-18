@@ -1,5 +1,10 @@
 package tools
 
+import (
+	"encoding/json"
+	"os/exec"
+)
+
 type ShellTool struct{}
 
 type shellArguments struct {
@@ -10,4 +15,20 @@ func (t *ShellTool) Name() string {
 	return "shell"
 }
 
-func (t *ShellTool) Execute(arguments string) (string, error) {}
+func (t *ShellTool) Execute(arguments string) (string, error) {
+	var args shellArguments
+
+	err := json.Unmarshal([]byte(arguments), &args)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command("sh", "-c", args.Command)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(output), err
+	}
+
+	return string(output), nil
+}
