@@ -40,6 +40,10 @@ type tool struct {
 type input struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+
+	Type   string `json:"type,omitempty"`
+	CallID string `json:"call_id,omitempty"`
+	Output string `json:"output,omitempty"`
 }
 
 type response struct {
