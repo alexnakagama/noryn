@@ -42,7 +42,24 @@ func (c failingClient) Chat(context.Context, llm.Request) (llm.Response, error) 
 // the tool results and the tool errors inside the agent loop.
 type fakeTool struct{}
 
-func (fakeTool) Name() string { return "fake" }
+func (fakeTool) Name() string {
+	return "fake"
+}
+
+func (fakeTool) Description() string {
+	return "A fake tool for testing."
+}
+
+func (fakeTool) Definition() llm.ToolDefinition {
+	return llm.ToolDefinition{
+		Name:        "fake",
+		Description: "A fake tool for testing.",
+		Parameters: map[string]any{
+			"type":       "object",
+			"properties": map[string]any{},
+		},
+	}
+}
 
 func (fakeTool) Execute(arguments string) (string, error) {
 	if arguments == "boom" {
@@ -259,5 +276,38 @@ func TestChatReturnsClientErrors(t *testing.T) {
 	_, err := agent.Chat(context.Background(), llm.Request{})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("Chat() error = %v, want %v", err, wantErr)
+	}
+}
+
+func TestChatSendsToolDefinitions(t *testing.T) {
+	client := &stubClient{
+		responses: []llm.Response{
+			finalResponse("done"),
+		},
+	}
+
+	agent := New(client, fakeTool{})
+
+	_, err := agent.Chat(context.Background(), llm.Request{})
+	if err != nil {
+		t.Fatalf("Chat() error = %v", err)
+	}
+
+	if len(client.requests) != 1 {
+		t.Fatalf("client received %d requests, want 1", len(client.requests))
+	}
+
+	if len(client.requests[0].Tools) != 1 {
+		t.Fatalf("request contains %d tools, want 1", len(client.requests[0].Tools))
+	}
+
+	got := client.requests[0].Tools[0]
+
+	if got.Name != "fake" {
+		t.Errorf("tool name = %q, want %q", got.Name, "fake")
+	}
+
+	if got.Description != "A fake tool for testing." {
+		t.Errorf("tool description = %q, want %q", got.Description, "A fake tool for testing.")
 	}
 }

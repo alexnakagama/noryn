@@ -27,6 +27,14 @@ func NewClient(apiKey string) *Client {
 type request struct {
 	Model string  `json:"model"`
 	Input []input `json:"input"`
+	Tools []tool  `json:"tools,omitempty"`
+}
+
+type tool struct {
+	Type        string         `json:"type"`
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	Parameters  map[string]any `json:"parameters"`
 }
 
 type input struct {
