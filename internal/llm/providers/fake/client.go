@@ -22,7 +22,7 @@ func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, e
 			{
 				ID:        "call-1",
 				Name:      "read_file",
-				Arguments: `{"path":"main.go"}`,
+				Arguments: `{"path":"cmd/noryn/main.go"}`,
 			},
 		},
 	}, nil
