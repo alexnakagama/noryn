@@ -4,10 +4,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
 func TestReadFileTool_Name(t *testing.T) {
 	tool := ReadFileTool{}
+
 	got := tool.Name()
 
 	if got != "read_file" {
@@ -16,10 +19,16 @@ func TestReadFileTool_Name(t *testing.T) {
 }
 
 func TestReadFileTool_Execute(t *testing.T) {
-	existing := filepath.Join(t.TempDir(), "note.txt")
+	root := t.TempDir()
+
+	p := &project.Project{
+		Root: root,
+	}
+
+	existing := filepath.Join(root, "note.txt")
 	createSourceFile(t, existing, "first line\nsecond line\n")
 
-	empty := filepath.Join(t.TempDir(), "empty.txt")
+	empty := filepath.Join(root, "empty.txt")
 	createSourceFile(t, empty, "")
 
 	tests := []struct {
@@ -30,22 +39,22 @@ func TestReadFileTool_Execute(t *testing.T) {
 	}{
 		{
 			name: "returns the file contents",
-			args: `{"path":"` + existing + `"}`,
+			args: `{"path":"note.txt"}`,
 			want: "first line\nsecond line\n",
 		},
 		{
 			name: "returns an empty string for an empty file",
-			args: `{"path":"` + empty + `"}`,
+			args: `{"path":"empty.txt"}`,
 			want: "",
 		},
 		{
 			name:    "missing file returns an error",
-			args:    `{"path":"` + filepath.Join(t.TempDir(), "missing.txt") + `"}`,
+			args:    `{"path":"missing.txt"}`,
 			wantErr: true,
 		},
 		{
 			name:    "directory path returns an error",
-			args:    `{"path":"` + t.TempDir() + `"}`,
+			args:    `{"path":"."}`,
 			wantErr: true,
 		},
 		{
@@ -63,11 +72,17 @@ func TestReadFileTool_Execute(t *testing.T) {
 			args:    "not-json",
 			wantErr: true,
 		},
+		{
+			name:    "path outside project returns an error",
+			args:    `{"path":"../outside.txt"}`,
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tool := ReadFileTool{}
+			tool := NewReadFileTool(p)
+
 			got, err := tool.Execute(tt.args)
 
 			if tt.wantErr {
@@ -80,6 +95,7 @@ func TestReadFileTool_Execute(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Execute() error = %v", err)
 			}
+
 			if got != tt.want {
 				t.Errorf("Execute() = %q, want %q", got, tt.want)
 			}

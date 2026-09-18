@@ -33,7 +33,12 @@ func (t *ReadFileTool) Execute(arguments string) (string, error) {
 		return "", err
 	}
 
-	data, err := os.ReadFile(args.Path)
+	path, err := t.project.ResolvePath(args.Path)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
