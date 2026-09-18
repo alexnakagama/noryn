@@ -27,16 +27,27 @@ func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, e
 				{
 					ID:        "call-1",
 					Name:      "shell",
-					Arguments: `{"command":"echo \"Hello from Noryn\""}`,
+					Arguments: `{"command":"go test ./..."}`,
 				},
 			},
 		}, nil
 	}
 
+	for _, message := range request.Messages {
+		if message.Role == "tool" {
+			return llm.Response{
+				Message: llm.Message{
+					Role:    "assistant",
+					Content: "Shell result:\n" + message.Content,
+				},
+			}, nil
+		}
+	}
+
 	return llm.Response{
 		Message: llm.Message{
 			Role:    "assistant",
-			Content: "The command executed successfully.",
+			Content: "No tool result received.",
 		},
 	}, nil
 }
