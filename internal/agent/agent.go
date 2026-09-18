@@ -27,6 +27,8 @@ func New(client llm.Client, toolList ...tools.Tool) *Agent {
 }
 
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
+	request.Tools = a.toolDefinitions()
+
 	for {
 		response, err := a.client.Chat(ctx, request)
 		if err != nil {
