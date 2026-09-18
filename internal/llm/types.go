@@ -10,6 +10,7 @@ type Message struct {
 type Request struct {
 	Model    string
 	Messages []Message
+	Tools    []ToolDefinition
 }
 
 type Response struct {
@@ -21,4 +22,10 @@ type ToolCall struct {
 	ID        string
 	Name      string
 	Arguments string
+}
+
+type ToolDefinition struct {
+	Name        string
+	Description string
+	Parameters  map[string]any
 }
