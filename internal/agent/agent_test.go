@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/alexnakagama/noryn/internal/llm"
@@ -376,5 +377,44 @@ func TestChatPreservesHistoryBetweenCalls(t *testing.T) {
 
 	if history[2].Content != "second message" {
 		t.Errorf("history[2] = %q, want %q", history[2].Content, "second message")
+	}
+}
+
+func TestTruncateToolResult(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "result shorter than limit",
+			input: "hello",
+			want:  "hello",
+		},
+		{
+			name:  "empty result",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "result exactly at limit",
+			input: strings.Repeat("a", maxToolResultLength),
+			want:  strings.Repeat("a", maxToolResultLength),
+		},
+		{
+			name:  "result longer than limit",
+			input: strings.Repeat("a", maxToolResultLength+100),
+			want:  strings.Repeat("a", maxToolResultLength) + "\n[tool result truncated]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := truncateToolResult(tt.input)
+
+			if got != tt.want {
+				t.Errorf("truncateToolResult() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
