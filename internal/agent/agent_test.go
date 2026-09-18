@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -452,5 +453,31 @@ func TestRecentHistory(t *testing.T) {
 				t.Errorf("recentHistory() returned %d messages, want %d", len(got), tt.wantLength)
 			}
 		})
+	}
+}
+
+func TestRecentHistoryKeepsRecentMessages(t *testing.T) {
+	history := make([]llm.Message, 120)
+
+	for i := range history {
+		history[i].Content = fmt.Sprintf("message-%d", i)
+	}
+
+	got := recentHistory(history)
+
+	if len(got) != maxHistoryMessages {
+		t.Fatalf("recentHistory() returned %d messages, want %d", len(got), maxHistoryMessages)
+	}
+
+	if got[0].Content != "message-20" {
+		t.Errorf("first message = %q, want %q", got[0].Content, "message-20")
+	}
+
+	if got[len(got)-1].Content != "message-119" {
+		t.Errorf(
+			"last message = %q, want %q",
+			got[len(got)-1].Content,
+			"message-119",
+		)
 	}
 }
