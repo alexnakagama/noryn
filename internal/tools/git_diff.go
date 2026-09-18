@@ -9,3 +9,7 @@ type GitDiffTool struct {
 type gitDiffArguments struct {
 	Path string `json:"path"`
 }
+
+func NewGitDiffTool(project *project.Project) *GitDiffTool {
+
+}
