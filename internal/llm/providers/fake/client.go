@@ -7,7 +7,8 @@ import (
 )
 
 type Client struct {
-	callCount int
+	callCount   int
+	LastRequest llm.Request
 }
 
 func NewClient() *Client {
@@ -15,6 +16,7 @@ func NewClient() *Client {
 }
 
 func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
+	c.LastRequest = request
 	c.callCount++
 
 	if c.callCount == 1 {
