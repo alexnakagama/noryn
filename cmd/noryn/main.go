@@ -9,8 +9,7 @@ import (
 	"github.com/alexnakagama/noryn/internal/agent"
 	"github.com/alexnakagama/noryn/internal/config"
 	"github.com/alexnakagama/noryn/internal/llm"
-	"github.com/alexnakagama/noryn/internal/llm/providers/fake"
-	"github.com/alexnakagama/noryn/internal/llm/providers/openai"
+	"github.com/alexnakagama/noryn/internal/llm/providers"
 	"github.com/alexnakagama/noryn/internal/project"
 	"github.com/alexnakagama/noryn/internal/tools"
 )
@@ -26,26 +25,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fakeMode := flag.Bool("fake", false, "use the fake LLM provider")
-
 	flag.Parse()
 
 	if flag.NArg() < 1 {
-		log.Fatal("usage: noryn [--fake] <prompt>")
+		log.Fatal("usage: noryn <prompt>")
 	}
 
 	prompt := flag.Arg(0)
 
-	var client llm.Client
-
-	if *fakeMode {
-		client = fake.NewClient()
-	} else {
-		if cfg.APIKey == "" {
-			log.Fatal("OPENAI_API_KEY is not set")
-		}
-
-		client = openai.NewClient(cfg.APIKey)
+	client, err := providers.New(*cfg)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	agent := agent.New(
