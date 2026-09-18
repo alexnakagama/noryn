@@ -62,6 +62,8 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 				result = "tool error: " + err.Error()
 			}
 
+			result = truncateToolResult(result)
+
 			a.history = append(a.history, llm.Message{
 				Role:       "tool",
 				Content:    result,
