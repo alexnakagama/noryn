@@ -29,6 +29,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	projectContext, err := project.BuildContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	projectContextText := projectContext.String()
+
 	instructionsBuilder := instructions.NewBuilder(project)
 
 	projectInstructions, err := instructionsBuilder.Build()
@@ -90,8 +97,12 @@ func main() {
 				Model: cfg.Model,
 				Messages: []llm.Message{
 					{
-						Role:    "user",
-						Content: instructions.BuildPrompt(projectInstructions, prompt),
+						Role: "user",
+						Content: instructions.BuildPrompt(
+							projectInstructions,
+							projectContextText,
+							prompt,
+						),
 					},
 				},
 			},
