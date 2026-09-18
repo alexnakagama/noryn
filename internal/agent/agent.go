@@ -9,6 +9,7 @@ import (
 )
 
 const maxToolResultLength = 10_000
+const maxHistoryMessages = 100
 
 func truncateToolResult(result string) string {
 	if len(result) <= maxToolResultLength {
