@@ -41,3 +41,14 @@ func (p *Project) BuildContext() (Context, error) {
 		Files: files,
 	}, nil
 }
+
+func (c Context) String() string {
+	result := "Project root: " + c.Root + "\n"
+	result += "Files:\n"
+
+	for _, file := range c.Files {
+		result += "- " + file + "\n"
+	}
+
+	return result
+}
