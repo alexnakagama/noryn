@@ -21,13 +21,13 @@ func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, e
 		return llm.Response{
 			Message: llm.Message{
 				Role:    "assistant",
-				Content: "I need to read a file.",
+				Content: "I need to run a command.",
 			},
 			ToolCalls: []llm.ToolCall{
 				{
 					ID:        "call-1",
-					Name:      "read_file",
-					Arguments: `{"path":"does-not-exist.txt"}`,
+					Name:      "shell",
+					Arguments: `{"command":"echo \"Hello from Noryn\""}`,
 				},
 			},
 		}, nil
@@ -36,7 +36,7 @@ func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, e
 	return llm.Response{
 		Message: llm.Message{
 			Role:    "assistant",
-			Content: "I couldn't find the file.",
+			Content: "The command executed successfully.",
 		},
 	}, nil
 }
