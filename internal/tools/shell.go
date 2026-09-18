@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os/exec"
 
+	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/project"
 )
 
@@ -23,6 +24,27 @@ func NewShellTool(project *project.Project) *ShellTool {
 
 func (t *ShellTool) Name() string {
 	return "shell"
+}
+
+func (t *ShellTool) Description() string {
+	return "Execute a shell command inside the project directory."
+}
+
+func (t *ShellTool) Definition() llm.ToolDefinition {
+	return llm.ToolDefinition{
+		Name:        t.Name(),
+		Description: t.Description(),
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"command": map[string]any{
+					"type":        "string",
+					"description": "Shell command to execute.",
+				},
+			},
+			"required": []string{"command"},
+		},
+	}
 }
 
 func (t *ShellTool) Execute(arguments string) (string, error) {
