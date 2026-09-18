@@ -1,6 +1,13 @@
 package tools
 
-import "github.com/alexnakagama/noryn/internal/project"
+import (
+	"encoding/json"
+	"fmt"
+	"os/exec"
+	"strconv"
+
+	"github.com/alexnakagama/noryn/internal/project"
+)
 
 type GitLogTool struct {
 	project *project.Project
@@ -20,4 +27,36 @@ func (t *GitLogTool) Name() string {
 	return "git_log"
 }
 
-func (t *GitLogTool) Execute(arguments string) (string, error) {}
+func (t *GitLogTool) Execute(arguments string) (string, error) {
+	var args gitLogArguments
+
+	err := json.Unmarshal([]byte(arguments), &args)
+	if err != nil {
+		return "", err
+	}
+
+	if args.Limit <= 0 {
+		return "", fmt.Errorf("limit cannot be 0 or less than 0")
+	}
+
+	if args.Limit > 50 {
+		return "", fmt.Errorf("limit cannot be greater than 50")
+	}
+
+	cmd := exec.Command(
+		"git",
+		"log",
+		"--oneline",
+		"-n",
+		strconv.Itoa(args.Limit),
+	)
+
+	cmd.Dir = t.project.Root
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(output), err
+	}
+
+	return string(output), nil
+}
