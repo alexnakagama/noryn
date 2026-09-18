@@ -34,6 +34,7 @@ func (t *ShellTool) Execute(arguments string) (string, error) {
 	}
 
 	cmd := exec.Command("sh", "-c", args.Command)
+	cmd.Dir = t.project.Root
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
