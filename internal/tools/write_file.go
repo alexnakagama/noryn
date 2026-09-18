@@ -3,9 +3,13 @@ package tools
 import (
 	"encoding/json"
 	"os"
+
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
-type WriteFileTool struct{}
+type WriteFileTool struct {
+	project *project.Project
+}
 
 type writeFileArguments struct {
 	Path    string `json:"path"`
