@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"hash/maphash"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +45,26 @@ func (t *SearchTool) Description() string {
 	return "Search for text inside project files."
 }
 
-func (t *SearchTool) Definition() llm.ToolDefinition {}
+func (t *SearchTool) Definition() llm.ToolDefinition {
+	return llm.ToolDefinition{
+		Name:        t.Name(),
+		Description: t.Description(),
+		Parameters: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"query": map[string]any{
+					"type":        "string",
+					"description": "Text to search for",
+				},
+				"path": map[string]any{
+					"type":        "string",
+					"description": "Directory or file path to search in",
+				},
+			},
+			"required": []string{"query", "path"},
+		},
+	}
+}
 
 func (t *SearchTool) Execute(arguments string) (string, error) {
 	var args searchArguments
