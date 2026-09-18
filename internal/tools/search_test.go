@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alexnakagama/noryn/internal/project"
@@ -32,18 +33,30 @@ func TestSearchTool_Execute(t *testing.T) {
 			args: `{"query":"TODO","path":"."}`,
 			want: searchMatch("README.md", 3, "TODO: document the tool") +
 				searchMatch("main.go", 4, "\t// TODO: greet") +
-				searchMatch(filepath.Join("sub", "helper.go"), 3, "// TODO: implement helper"),
+				searchMatch(
+					filepath.Join("sub", "helper.go"),
+					3,
+					"// TODO: implement helper",
+				),
 		},
 		{
 			name: "matches every line that contains the query",
 			args: `{"query":"package","path":"."}`,
 			want: searchMatch("main.go", 1, "package main") +
-				searchMatch(filepath.Join("sub", "helper.go"), 1, "package sub"),
+				searchMatch(
+					filepath.Join("sub", "helper.go"),
+					1,
+					"package sub",
+				),
 		},
 		{
 			name: "scopes the search to a subdirectory",
 			args: `{"query":"package","path":"sub"}`,
-			want: searchMatch(filepath.Join("sub", "helper.go"), 1, "package sub"),
+			want: searchMatch(
+				filepath.Join("sub", "helper.go"),
+				1,
+				"package sub",
+			),
 		},
 		{
 			name: "does not report directories as matches",
@@ -93,6 +106,23 @@ func TestSearchTool_Execute(t *testing.T) {
 					'E',
 					'T',
 				}
+
+				if err := os.WriteFile(path, data, 0644); err != nil {
+					t.Fatalf("os.WriteFile(%q) error = %v", path, err)
+				}
+			},
+			want: "",
+		},
+		{
+			name: "ignores files larger than the maximum size",
+			args: `{"query":"SECRET","path":"."}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				path := filepath.Join(root, "large.txt")
+
+				data := make([]byte, maxSearchFileSize+1)
+				copy(data, "SECRET")
 
 				if err := os.WriteFile(path, data, 0644); err != nil {
 					t.Fatalf("os.WriteFile(%q) error = %v", path, err)
@@ -155,6 +185,27 @@ func TestSearchTool_Execute(t *testing.T) {
 				)
 			},
 			want: "",
+		},
+		{
+			name: "limits the number of search results",
+			args: `{"query":"MATCH","path":"."}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				var content strings.Builder
+
+				for i := 0; i < maxSearchResults+50; i++ {
+					fmt.Fprintf(&content, "MATCH %d\n", i)
+				}
+
+				createSearchFile(
+					t,
+					root,
+					"many-matches.txt",
+					content.String(),
+				)
+			},
+			want: searchMatches("many-matches.txt", maxSearchResults),
 		},
 		{
 			name:    "empty query returns an error",
@@ -277,4 +328,20 @@ func searchMatch(path string, lineNumber int, line string) string {
 		lineNumber,
 		line,
 	)
+}
+
+func searchMatches(path string, count int) string {
+	var result strings.Builder
+
+	for i := 0; i < count; i++ {
+		fmt.Fprintf(
+			&result,
+			"%s:%d:MATCH %d\n",
+			path,
+			i+1,
+			i,
+		)
+	}
+
+	return result.String()
 }
