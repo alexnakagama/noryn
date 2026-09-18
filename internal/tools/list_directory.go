@@ -34,7 +34,12 @@ func (t *ListDirectoryTool) Execute(arguments string) (string, error) {
 		return "", err
 	}
 
-	entries, err := os.ReadDir(args.Path)
+	path, err := t.project.ResolvePath(args.Path)
+	if err != nil {
+		return "", err
+	}
+
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return "", err
 	}
