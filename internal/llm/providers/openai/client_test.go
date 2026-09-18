@@ -110,3 +110,51 @@ func assertRequestMetadata(t *testing.T, r *http.Request) {
 		t.Errorf("Content-Type = %q, want %q", got, "application/json")
 	}
 }
+
+func TestClient_ParsesFunctionCall(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		_, _ = w.Write([]byte(`{
+			"output": [
+				{
+					"type": "function_call",
+					"name": "shell",
+					"arguments": "{\"command\":\"go test ./...\"}",
+					"call_id": "call-1"
+				}
+			]
+		}`))
+	}))
+	defer server.Close()
+
+	client := NewClient("test-api-key")
+	client.baseURL = server.URL
+
+	response, err := client.Chat(context.Background(), llm.Request{
+		Model: "gpt-5",
+	})
+
+	if err != nil {
+		t.Fatalf("Chat() error = %v", err)
+	}
+
+	if len(response.ToolCalls) != 1 {
+		t.Fatalf("ToolCalls length = %d, want 1", len(response.ToolCalls))
+	}
+
+	call := response.ToolCalls[0]
+
+	if call.ID != "call-1" {
+		t.Errorf("call.ID = %q, want %q", call.ID, "call-1")
+	}
+
+	if call.Name != "shell" {
+		t.Errorf("call.Name = %q, want %q", call.Name, "shell")
+	}
+
+	if call.Arguments != `{"command":"go test ./..."}` {
+		t.Errorf("call.Arguments = %q, want %q", call.Arguments, `{"command":"go test ./..."}`)
+	}
+}
