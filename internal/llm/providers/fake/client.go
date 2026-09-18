@@ -21,29 +21,13 @@ func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, e
 		return llm.Response{
 			Message: llm.Message{
 				Role:    "assistant",
-				Content: "I need to see the files.",
+				Content: "I need to create a file.",
 			},
 			ToolCalls: []llm.ToolCall{
 				{
 					ID:        "call-1",
-					Name:      "list_directory",
-					Arguments: `{"path":"."}`,
-				},
-			},
-		}, nil
-	}
-
-	if c.callCount == 2 {
-		return llm.Response{
-			Message: llm.Message{
-				Role:    "assistant",
-				Content: "I need to read the main file.",
-			},
-			ToolCalls: []llm.ToolCall{
-				{
-					ID:        "call-2",
-					Name:      "read_file",
-					Arguments: `{"path":"cmd/noryn/main.go"}`,
+					Name:      "write_file",
+					Arguments: `{"path":"test.txt","content":"Hello from Noryn!"}`,
 				},
 			},
 		}, nil
@@ -52,7 +36,7 @@ func (c *Client) Chat(ctx context.Context, request llm.Request) (llm.Response, e
 	return llm.Response{
 		Message: llm.Message{
 			Role:    "assistant",
-			Content: "I inspected the project successfully.",
+			Content: "I created the file successfully.",
 		},
 	}, nil
 }
