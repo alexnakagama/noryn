@@ -9,3 +9,7 @@ type listDirectoryArguments struct {
 func (t *ListDirectoryTool) Name() string {
 	return "list_directory"
 }
+
+func (t *ListDirectoryTool) Execute(arguments string) (string, error) {
+
+}
