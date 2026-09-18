@@ -3,9 +3,13 @@ package tools
 import (
 	"encoding/json"
 	"os"
+
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
-type ReadFileTool struct{}
+type ReadFileTool struct {
+	project *project.Project
+}
 
 type readFileArguments struct {
 	Path string `json:"path"`
