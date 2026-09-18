@@ -15,6 +15,12 @@ type shellArguments struct {
 	Command string `json:"command"`
 }
 
+func NewShellTool(project *project.Project) *ShellTool {
+	return &ShellTool{
+		project: project,
+	}
+}
+
 func (t *ShellTool) Name() string {
 	return "shell"
 }
