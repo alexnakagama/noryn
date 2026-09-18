@@ -19,3 +19,5 @@ func NewGitLogTool(project *project.Project) *GitLogTool {
 func (t *GitLogTool) Name() string {
 	return "git_log"
 }
+
+func (t *GitLogTool) Execute(arguments string) (string, error) {}
