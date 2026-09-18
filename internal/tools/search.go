@@ -39,6 +39,8 @@ func (t *SearchTool) Name() string {
 	return "search"
 }
 
+func (t *SearchTool) Description() string {}
+
 func (t *SearchTool) Execute(arguments string) (string, error) {
 	var args searchArguments
 
