@@ -1,4 +1,3 @@
-
 # Noryn
 
 Noryn is an AI coding agent written in Go that provides an agentic software development experience from the terminal.
