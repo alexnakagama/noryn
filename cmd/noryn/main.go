@@ -17,6 +17,7 @@ func main() {
 	agent := agent.New(
 		client,
 		&tools.ReadFileTool{},
+		&tools.ListDirectoryTool{},
 	)
 
 	request := llm.Request{
