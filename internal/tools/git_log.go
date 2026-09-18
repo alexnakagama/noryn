@@ -11,4 +11,7 @@ type gitLogArguments struct {
 }
 
 func NewGitLogTool(project *project.Project) *GitLogTool {
+	return &GitLogTool{
+		project: project,
+	}
 }
