@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -76,6 +77,10 @@ func (t *SearchTool) Execute(arguments string) (string, error) {
 			return nil
 		}
 
+		if isBinary(data) {
+			return nil
+		}
+
 		for lineNumber, line := range strings.Split(string(data), "\n") {
 			if !strings.Contains(line, args.Query) {
 				continue
@@ -103,4 +108,8 @@ func (t *SearchTool) Execute(arguments string) (string, error) {
 	}
 
 	return result.String(), nil
+}
+
+func isBinary(data []byte) bool {
+	return bytes.Contains(data, []byte{0})
 }
