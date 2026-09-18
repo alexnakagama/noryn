@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/tools"
@@ -29,4 +30,11 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 	return a.client.Chat(ctx, request)
 }
 
-func (a *Agent) executeTool(call llm.ToolCall) (string, error) {}
+func (a *Agent) executeTool(call llm.ToolCall) (string, error) {
+	tool, ok := a.tools[call.Name]
+	if !ok {
+		return "", fmt.Errorf("tool not found: %s", call.Name)
+	}
+
+	return tool.Execute(call.Arguments)
+}
