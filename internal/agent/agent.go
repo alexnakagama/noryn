@@ -11,7 +11,13 @@ import (
 const maxToolResultLength = 10_000
 const maxHistoryMessages = 100
 
-func recentHistory(history []llm.Message) []llm.Message {}
+func recentHistory(history []llm.Message) []llm.Message {
+	if len(history) <= maxHistoryMessages {
+		return history
+	}
+
+	return history[len(history)-maxHistoryMessages:]
+}
 
 func truncateToolResult(result string) string {
 	if len(result) <= maxToolResultLength {
