@@ -7,6 +7,7 @@ import (
 	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/llm/providers/fake"
 	"github.com/alexnakagama/noryn/internal/llm/providers/openai"
+	"github.com/alexnakagama/noryn/internal/llm/providers/openrouter"
 )
 
 func New(cfg config.Config) (llm.Client, error) {
@@ -20,6 +21,13 @@ func New(cfg config.Config) (llm.Client, error) {
 		}
 
 		return openai.NewClient(cfg.APIKey), nil
+
+	case "openrouter":
+		if cfg.OpenRouterAPIKey == "" {
+			return nil, fmt.Errorf("OPENROUTER_API_KEY is not set")
+		}
+
+		return openrouter.NewClient(cfg.OpenRouterAPIKey), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", cfg.Provider)
