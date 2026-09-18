@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+
+	"github.com/alexnakagama/noryn/internal/project"
 )
 
-type ListDirectoryTool struct{}
+type ListDirectoryTool struct {
+	project *project.Project
+}
 
 type listDirectoryArguments struct {
 	Path string `json:"path"`
