@@ -39,7 +39,9 @@ func (t *SearchTool) Name() string {
 	return "search"
 }
 
-func (t *SearchTool) Description() string {}
+func (t *SearchTool) Description() string {
+	return "Search for text inside project files."
+}
 
 func (t *SearchTool) Execute(arguments string) (string, error) {
 	var args searchArguments
