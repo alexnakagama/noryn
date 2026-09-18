@@ -63,4 +63,12 @@ func (a *Agent) executeTool(call llm.ToolCall) (string, error) {
 	return tool.Execute(call.Arguments)
 }
 
-func (a *Agent) toolDefinitions() []llm.ToolDefinition {}
+func (a *Agent) toolDefinitions() []llm.ToolDefinition {
+	definitions := make([]llm.ToolDefinition, 0, len(a.tools))
+
+	for _, tool := range a.tools {
+		definitions = append(definitions, tool.Definition())
+	}
+
+	return definitions
+}
