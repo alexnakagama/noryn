@@ -1,6 +1,7 @@
 package project
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -26,7 +27,27 @@ func shouldIncludeFile(path string, info os.FileInfo) bool {
 	return true
 }
 
-func isBinaryFile(path string) (bool, error) {}
+func isBinaryFile(path string) (bool, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	buffer := make([]byte, 512)
+
+	n, err := file.Read(buffer)
+	if err != nil {
+		return false, err
+	}
+
+	contentType := http.DetectContentType(buffer[:n])
+
+	return !strings.HasPrefix(contentType, "text/") &&
+		contentType != "application/json" &&
+		contentType != "application/xml" &&
+		contentType != "application/javascript", nil
+}
 
 func (p *Project) BuildContext() (Context, error) {
 	var files []string
