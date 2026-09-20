@@ -42,6 +42,10 @@ func (p *Project) BuildContext() (Context, error) {
 			return nil
 		}
 
+		if !shouldIncludeFile(path, info) {
+			return nil
+		}
+
 		relPath, err := filepath.Rel(p.Root, path)
 		if err != nil {
 			return err
