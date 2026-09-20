@@ -106,3 +106,35 @@ func TestContextString(t *testing.T) {
 		t.Fatalf("expected %q, got %q", expected, got)
 	}
 }
+
+func TestBuildContextIgnoresLargeFiles(t *testing.T) {
+	root := t.TempDir()
+
+	smallFile := filepath.Join(root, "main.go")
+	largeFile := filepath.Join(root, "large.txt")
+
+	if err := os.WriteFile(smallFile, []byte("package main"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	largeContent := make([]byte, 1_000_001)
+
+	if err := os.WriteFile(largeFile, largeContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	p := &Project{Root: root}
+
+	ctx, err := p.BuildContext()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []string{
+		"main.go",
+	}
+
+	if !reflect.DeepEqual(ctx.Files, expected) {
+		t.Fatalf("expected %v, got %v", expected, ctx.Files)
+	}
+}
