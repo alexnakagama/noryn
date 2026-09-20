@@ -34,9 +34,10 @@ func truncateToolResult(result string) string {
 }
 
 type Agent struct {
-	client  llm.Client
-	tools   map[string]tools.Tool
-	history []llm.Message
+	client     llm.Client
+	tools      map[string]tools.Tool
+	history    []llm.Message
+	onToolCall func(llm.ToolCall)
 }
 
 func New(client llm.Client, toolList ...tools.Tool) *Agent {
@@ -50,6 +51,10 @@ func New(client llm.Client, toolList ...tools.Tool) *Agent {
 		client: client,
 		tools:  toolMap,
 	}
+}
+
+func (a *Agent) SetToolCallHandler(handler func(llm.ToolCall)) {
+	a.onToolCall = handler
 }
 
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
