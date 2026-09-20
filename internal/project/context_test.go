@@ -176,3 +176,38 @@ func TestIsBinaryFile(t *testing.T) {
 		t.Fatal("expected binary file to be binary")
 	}
 }
+
+func TestBuildContextIgnoresBinaryFiles(t *testing.T) {
+	root := t.TempDir()
+
+	textPath := filepath.Join(root, "main.go")
+	binaryPath := filepath.Join(root, "image.png")
+
+	if err := os.WriteFile(textPath, []byte("package main\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	binaryContent := []byte{
+		0x89, 0x50, 0x4E, 0x47,
+		0x0D, 0x0A, 0x1A, 0x0A,
+	}
+
+	if err := os.WriteFile(binaryPath, binaryContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	p := &Project{Root: root}
+
+	ctx, err := p.BuildContext()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []string{
+		"main.go",
+	}
+
+	if !reflect.DeepEqual(ctx.Files, expected) {
+		t.Fatalf("expected %v, got %v", expected, ctx.Files)
+	}
+}
