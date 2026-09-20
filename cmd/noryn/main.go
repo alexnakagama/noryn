@@ -72,6 +72,10 @@ func main() {
 		fmt.Println("→", call.Name, call.Arguments)
 	})
 
+	agent.SetToolResultHandler(func(call llm.ToolCall, result string) {
+		fmt.Println("←", call.Name)
+	})
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("Noryn")
