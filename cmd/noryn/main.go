@@ -107,6 +107,7 @@ func main() {
 					{
 						Role: "user",
 						Content: instructions.BuildPrompt(
+							instructions.SystemPrompt,
 							projectInstructions,
 							projectContextText,
 							prompt,
