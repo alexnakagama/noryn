@@ -26,6 +26,8 @@ func shouldIncludeFile(path string, info os.FileInfo) bool {
 	return true
 }
 
+func isBinaryFile(path string) (bool, error) {}
+
 func (p *Project) BuildContext() (Context, error) {
 	var files []string
 
