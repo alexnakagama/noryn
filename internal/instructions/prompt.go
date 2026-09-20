@@ -2,10 +2,13 @@ package instructions
 
 import "strings"
 
-func BuildPrompt(projectInstructions, projectContext, userPrompt string) string {
+func BuildPrompt(systemPrompt, projectInstructions, projectContext, userPrompt string) string {
+	systemPrompt = strings.TrimRight(systemPrompt, "\n")
+	projectInstructions = strings.TrimRight(projectInstructions, "\n")
 	projectContext = strings.TrimRight(projectContext, "\n")
 
-	return projectInstructions + "\n\n" +
+	return systemPrompt + "\n\n" +
+		projectInstructions + "\n\n" +
 		projectContext + "\n\n" +
 		userPrompt
 }
