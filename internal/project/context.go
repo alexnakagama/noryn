@@ -3,6 +3,7 @@ package project
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var ignoredDirectories = map[string]bool{
@@ -53,12 +54,17 @@ func (p *Project) BuildContext() (Context, error) {
 }
 
 func (c Context) String() string {
-	result := "Project root: " + c.Root + "\n"
-	result += "Files:\n"
+	var builder strings.Builder
+
+	builder.WriteString("Project root: ")
+	builder.WriteString(c.Root)
+	builder.WriteString("\nFiles:\n")
 
 	for _, file := range c.Files {
-		result += "- " + file + "\n"
+		builder.WriteString("- ")
+		builder.WriteString(file)
+		builder.WriteString("\n")
 	}
 
-	return result
+	return builder.String()
 }
