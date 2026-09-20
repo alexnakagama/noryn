@@ -138,3 +138,41 @@ func TestBuildContextIgnoresLargeFiles(t *testing.T) {
 		t.Fatalf("expected %v, got %v", expected, ctx.Files)
 	}
 }
+
+func TestIsBinaryFile(t *testing.T) {
+	root := t.TempDir()
+
+	textPath := filepath.Join(root, "main.go")
+	binaryPath := filepath.Join(root, "image.png")
+
+	if err := os.WriteFile(textPath, []byte("package main\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	binaryContent := []byte{
+		0x89, 0x50, 0x4E, 0x47,
+		0x0D, 0x0A, 0x1A, 0x0A,
+	}
+
+	if err := os.WriteFile(binaryPath, binaryContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	isBinary, err := isBinaryFile(textPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if isBinary {
+		t.Fatal("expected text file to not be binary")
+	}
+
+	isBinary, err = isBinaryFile(binaryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !isBinary {
+		t.Fatal("expected binary file to be binary")
+	}
+}
