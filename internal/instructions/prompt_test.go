@@ -10,7 +10,8 @@ func TestBuildPrompt(t *testing.T) {
 		"Read main.go",
 	)
 
-	expected := "Be careful with files.\n\n" +
+	expected := "You are noryn\n\n" +
+		"Be careful with files.\n\n" +
 		"Project context here.\n\n" +
 		"Read main.go"
 
@@ -32,7 +33,8 @@ func TestBuildPromptWithProjectContext(t *testing.T) {
 		userPrompt,
 	)
 
-	expected := "Be careful with files.\n\n" +
+	expected := "You are noryn\n\n" +
+		"Be careful with files.\n\n" +
 		"Project root: /tmp/noryn\n" +
 		"Files:\n" +
 		"- main.go\n\n" +
