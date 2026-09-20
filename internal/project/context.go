@@ -5,6 +5,12 @@ import (
 	"path/filepath"
 )
 
+var ignoredDirectories = map[string]bool{
+	".git":         true,
+	"node_modules": true,
+	"vendor":       true,
+}
+
 type Context struct {
 	Root  string
 	Files []string
@@ -19,6 +25,10 @@ func (p *Project) BuildContext() (Context, error) {
 		}
 
 		if info.IsDir() {
+			if ignoredDirectories[info.Name()] {
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 
