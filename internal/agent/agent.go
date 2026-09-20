@@ -77,6 +77,10 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		request.Messages = recentHistory(a.history)
 
 		for _, call := range response.ToolCalls {
+			if a.onToolCall != nil {
+				a.onToolCall(call)
+			}
+
 			result, err := a.executeTool(call)
 			if err != nil {
 				result = "tool error: " + err.Error()
