@@ -19,12 +19,21 @@ type Context struct {
 	Files []string
 }
 
-func shouldIncludeFile(path string, info os.FileInfo) bool {
+func shouldIncludeFile(path string, info os.FileInfo) (bool, error) {
 	if info.Size() > 1_000_000 {
-		return false
+		return false, nil
 	}
 
-	return true
+	isBinary, err := isBinaryFile(path)
+	if err != nil {
+		return false, err
+	}
+
+	if isBinary {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func isBinaryFile(path string) (bool, error) {
@@ -65,7 +74,12 @@ func (p *Project) BuildContext() (Context, error) {
 			return nil
 		}
 
-		if !shouldIncludeFile(path, info) {
+		include, err := shouldIncludeFile(path, info)
+		if err != nil {
+			return err
+		}
+
+		if !include {
 			return nil
 		}
 
