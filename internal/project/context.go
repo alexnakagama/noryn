@@ -18,7 +18,13 @@ type Context struct {
 	Files []string
 }
 
-func shouldIncludeFile(path string, info os.FileInfo) bool {}
+func shouldIncludeFile(path string, info os.FileInfo) bool {
+	if info.Size() > 1_000_000 {
+		return false
+	}
+
+	return true
+}
 
 func (p *Project) BuildContext() (Context, error) {
 	var files []string
