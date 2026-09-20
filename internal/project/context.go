@@ -18,6 +18,8 @@ type Context struct {
 	Files []string
 }
 
+func shouldIncludeFile(path string, info os.FileInfo) bool {}
+
 func (p *Project) BuildContext() (Context, error) {
 	var files []string
 
