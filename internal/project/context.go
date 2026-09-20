@@ -3,6 +3,7 @@ package project
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -46,6 +47,8 @@ func (p *Project) BuildContext() (Context, error) {
 	if err != nil {
 		return Context{}, err
 	}
+
+	sort.Strings(files)
 
 	return Context{
 		Root:  p.Root,

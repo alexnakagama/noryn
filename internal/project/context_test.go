@@ -3,69 +3,84 @@ package project
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
 func TestBuildContext(t *testing.T) {
 	root := t.TempDir()
 
-	err := os.WriteFile(
-		filepath.Join(root, "main.go"),
-		[]byte("package main"),
-		0644,
-	)
-	if err != nil {
-		t.Fatal(err)
+	files := []string{
+		"main.go",
+		"internal/agent.go",
 	}
 
-	err = os.Mkdir(filepath.Join(root, "internal"), 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, file := range files {
+		path := filepath.Join(root, file)
 
-	err = os.WriteFile(
-		filepath.Join(root, "internal", "agent.go"),
-		[]byte("package agent"),
-		0644,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	project := &Project{
-		Root: root,
-	}
-
-	ctx, err := project.BuildContext()
-	if err != nil {
-		t.Fatalf("BuildContext() returned error: %v", err)
-	}
-
-	if ctx.Root != root {
-		t.Errorf(
-			"Context.Root = %q, want %q",
-			ctx.Root,
-			root,
-		)
-	}
-
-	if len(ctx.Files) != 2 {
-		t.Fatalf(
-			"Context.Files has %d files, want %d",
-			len(ctx.Files),
-			2,
-		)
-	}
-
-	expectedFiles := map[string]bool{
-		"main.go":           true,
-		"internal/agent.go": true,
-	}
-
-	for _, file := range ctx.Files {
-		if !expectedFiles[file] {
-			t.Errorf("unexpected file in context: %q", file)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
 		}
+
+		if err := os.WriteFile(path, []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	p := &Project{Root: root}
+
+	ctx, err := p.BuildContext()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []string{
+		"internal/agent.go",
+		"main.go",
+	}
+
+	if !reflect.DeepEqual(ctx.Files, expected) {
+		t.Fatalf("expected %v, got %v", expected, ctx.Files)
+	}
+}
+
+func TestBuildContextIgnoresDirectories(t *testing.T) {
+	root := t.TempDir()
+
+	files := []string{
+		"main.go",
+		".git/config",
+		"node_modules/package/index.js",
+		"vendor/library/library.go",
+		"internal/agent/agent.go",
+	}
+
+	for _, file := range files {
+		path := filepath.Join(root, file)
+
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(path, []byte("test"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	p := &Project{Root: root}
+
+	ctx, err := p.BuildContext()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []string{
+		"internal/agent/agent.go",
+		"main.go",
+	}
+
+	if !reflect.DeepEqual(ctx.Files, expected) {
+		t.Fatalf("expected %v, got %v", expected, ctx.Files)
 	}
 }
 
@@ -79,19 +94,15 @@ func TestContextString(t *testing.T) {
 		},
 	}
 
-	got := ctx.String()
-
 	expected := "Project root: /tmp/noryn\n" +
 		"Files:\n" +
 		"- main.go\n" +
 		"- internal/agent/agent.go\n" +
 		"- go.mod\n"
 
+	got := ctx.String()
+
 	if got != expected {
-		t.Errorf(
-			"Context.String() = %q, want %q",
-			got,
-			expected,
-		)
+		t.Fatalf("expected %q, got %q", expected, got)
 	}
 }
