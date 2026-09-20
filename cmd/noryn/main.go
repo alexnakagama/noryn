@@ -68,6 +68,10 @@ func main() {
 		tools.NewGitLogTool(project),
 	)
 
+	agent.SetToolCallHandler(func(call llm.ToolCall) {
+		fmt.Println("→", call.Name, call.Arguments)
+	})
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("Noryn")
