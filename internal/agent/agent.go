@@ -10,6 +10,7 @@ import (
 
 const maxToolResultLength = 10_000
 const maxHistoryMessages = 100
+const maxToolIterations = 20
 
 func recentHistory(history []llm.Message) []llm.Message {
 	if len(history) <= maxHistoryMessages {
