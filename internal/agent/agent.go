@@ -71,12 +71,6 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 	toolIterations := 0
 
 	for {
-		toolIterations++
-
-		if toolIterations > maxToolIterations {
-			return llm.Response{}, fmt.Errorf("maximum tool iteration exceeded")
-		}
-
 		response, err := a.client.Chat(ctx, request)
 		if err != nil {
 			return llm.Response{}, err
@@ -85,6 +79,12 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		if len(response.ToolCalls) == 0 {
 			a.history = append(a.history, response.Message)
 			return response, nil
+		}
+
+		toolIterations++
+
+		if toolIterations > maxToolIterations {
+			return llm.Response{}, fmt.Errorf("maximum tool iteration exceeded")
 		}
 
 		a.history = append(a.history, response.Message)
