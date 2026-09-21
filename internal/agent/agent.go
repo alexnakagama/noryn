@@ -51,8 +51,9 @@ func New(client llm.Client, toolList ...tools.Tool) *Agent {
 	}
 
 	return &Agent{
-		client: client,
-		tools:  toolMap,
+		client:  client,
+		tools:   toolMap,
+		context: NewContextManager(),
 	}
 }
 
