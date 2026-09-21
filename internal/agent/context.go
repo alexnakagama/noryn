@@ -1,5 +1,7 @@
 package agent
 
+import "github.com/alexnakagama/noryn/internal/llm"
+
 const (
 	maxContextMessages = 100
 )
@@ -13,3 +15,5 @@ func NewContextManager(maxMessages int) *ContextManager {
 		maxMessages: maxMessages,
 	}
 }
+
+func (c *ContextManager) Build(history []llm.Message) []llm.Message {}
