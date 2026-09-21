@@ -18,7 +18,7 @@ func recentHistory(history []llm.Message) []llm.Message {
 
 	start := len(history) - maxHistoryMessages
 
-	for start < len(history) && history[start].Role == "tool" {
+	for start > 0 && history[start].Role == "tool" {
 		start--
 	}
 
