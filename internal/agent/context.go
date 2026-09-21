@@ -7,3 +7,9 @@ const (
 type ContextManager struct {
 	maxMessages int
 }
+
+func NewContextManager(maxMessages int) *ContextManager {
+	return &ContextManager{
+		maxMessages: maxMessages,
+	}
+}
