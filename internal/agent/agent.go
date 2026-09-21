@@ -9,22 +9,7 @@ import (
 )
 
 const maxToolResultLength = 10_000
-const maxHistoryMessages = 100
 const maxToolIterations = 20
-
-func recentHistory(history []llm.Message) []llm.Message {
-	if len(history) <= maxHistoryMessages {
-		return history
-	}
-
-	start := len(history) - maxHistoryMessages
-
-	for start > 0 && history[start].Role == "tool" {
-		start--
-	}
-
-	return history[start:]
-}
 
 func truncateToolResult(result string) string {
 	if len(result) <= maxToolResultLength {
@@ -86,11 +71,10 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		toolIterations++
 
 		if toolIterations > maxToolIterations {
-			return llm.Response{}, fmt.Errorf("maximum tool iteration exceeded")
+			return llm.Response{}, fmt.Errorf("maximum tool iterations exceeded")
 		}
 
 		a.history = append(a.history, response.Message)
-		request.Messages = a.context.Build(a.history)
 
 		for _, call := range response.ToolCalls {
 			if a.onToolCall != nil {
@@ -113,9 +97,9 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 				Content:    result,
 				ToolCallID: call.ID,
 			})
-
-			request.Messages = a.context.Build(a.history)
 		}
+
+		request.Messages = a.context.Build(a.history)
 	}
 }
 
