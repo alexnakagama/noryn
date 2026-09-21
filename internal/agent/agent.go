@@ -38,6 +38,7 @@ type Agent struct {
 	client       llm.Client
 	tools        map[string]tools.Tool
 	history      []llm.Message
+	context      *ContextManager
 	onToolCall   func(llm.ToolCall)
 	onToolResult func(llm.ToolCall, string)
 }
