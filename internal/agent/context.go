@@ -10,9 +10,9 @@ type ContextManager struct {
 	maxMessages int
 }
 
-func NewContextManager(maxMessages int) *ContextManager {
+func NewContextManager() *ContextManager {
 	return &ContextManager{
-		maxMessages: maxMessages,
+		maxMessages: maxContextMessages,
 	}
 }
 
