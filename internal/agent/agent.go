@@ -67,7 +67,7 @@ func (a *Agent) SetToolResultHandler(handler func(llm.ToolCall, string)) {
 
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
 	a.history = append(a.history, request.Messages...)
-	request.Messages = recentHistory(a.history)
+	request.Messages = a.context.Build(a.history)
 	request.Tools = a.toolDefinitions()
 
 	toolIterations := 0
@@ -90,7 +90,7 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		}
 
 		a.history = append(a.history, response.Message)
-		request.Messages = recentHistory(a.history)
+		request.Messages = a.context.Build(a.history)
 
 		for _, call := range response.ToolCalls {
 			if a.onToolCall != nil {
@@ -114,7 +114,7 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 				ToolCallID: call.ID,
 			})
 
-			request.Messages = recentHistory(a.history)
+			request.Messages = a.context.Build(a.history)
 		}
 	}
 }
