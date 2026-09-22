@@ -11,7 +11,8 @@ type ContextManager struct {
 
 func NewContextManager() *ContextManager {
 	return &ContextManager{
-		maxTokens: maxContextTokens,
+		maxTokens:    maxContextTokens,
+		tokenCounter: EstimateTokenCounter{},
 	}
 }
 
