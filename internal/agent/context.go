@@ -17,11 +17,23 @@ func NewContextManager() *ContextManager {
 }
 
 func (c *ContextManager) Build(history []llm.Message) []llm.Message {
-	if len(history) <= c.maxMessages {
+	if len(history) == 0 {
 		return history
 	}
 
-	start := len(history) - c.maxMessages
+	totalTokens := 0
+	start := len(history)
+
+	for i := len(history) - 1; i >= 0; i-- {
+		messageTokens := c.tokenCounter.Count(history[i])
+
+		if totalTokens+messageTokens > c.maxTokens {
+			break
+		}
+
+		totalTokens += messageTokens
+		start = i
+	}
 
 	// Dont start in the middle of a tool-call turn
 	for start > 0 && history[start].Role == "tool" {
