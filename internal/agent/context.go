@@ -10,7 +10,9 @@ type ContextManager struct {
 }
 
 func NewContextManager() *ContextManager {
-	return &ContextManager{}
+	return &ContextManager{
+		maxTokens: maxContextTokens,
+	}
 }
 
 func (c *ContextManager) Build(history []llm.Message) []llm.Message {
