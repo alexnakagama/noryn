@@ -40,4 +40,11 @@ func (r *Registry) Get(name string) (Tool, bool) {
 	return tool, ok
 }
 
-func (r *Registry) Execute(call llm.ToolCall) (string, error) {}
+func (r *Registry) Execute(call llm.ToolCall) (string, error) {
+	tool, ok := r.Get(call.Name)
+	if !ok {
+		return "", fmt.Errorf("tool not found: %s", call.Name)
+	}
+
+	return tool.Execute(call.Arguments)
+}
