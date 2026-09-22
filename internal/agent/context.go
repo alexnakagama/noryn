@@ -2,15 +2,15 @@ package agent
 
 import "github.com/alexnakagama/noryn/internal/llm"
 
+const maxContextTokens = 32_000
+
 type ContextManager struct {
 	maxTokens    int
 	tokenCounter TokenCounter
 }
 
 func NewContextManager() *ContextManager {
-	return &ContextManager{
-		maxMessages: maxContextMessages,
-	}
+	return &ContextManager{}
 }
 
 func (c *ContextManager) Build(history []llm.Message) []llm.Message {
