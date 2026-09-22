@@ -2,12 +2,9 @@ package agent
 
 import "github.com/alexnakagama/noryn/internal/llm"
 
-const (
-	maxContextMessages = 100
-)
-
 type ContextManager struct {
-	maxMessages int
+	maxTokens    int
+	tokenCounter TokenCounter
 }
 
 func NewContextManager() *ContextManager {
