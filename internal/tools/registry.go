@@ -1,6 +1,10 @@
 package tools
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/alexnakagama/noryn/internal/llm"
+)
 
 type Registry struct {
 	tools map[string]Tool
@@ -35,3 +39,5 @@ func (r *Registry) Get(name string) (Tool, bool) {
 
 	return tool, ok
 }
+
+func (r *Registry) Execute(call llm.ToolCall) (string, error) {}
