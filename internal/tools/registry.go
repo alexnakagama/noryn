@@ -30,4 +30,8 @@ func (r *Registry) Register(tool Tool) error {
 	return nil
 }
 
-func (r *Registry) Get(name string) (Tool, bool) {}
+func (r *Registry) Get(name string) (Tool, bool) {
+	tool, ok := r.tools[name]
+
+	return tool, ok
+}
