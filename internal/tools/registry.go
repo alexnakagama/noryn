@@ -48,3 +48,5 @@ func (r *Registry) Execute(call llm.ToolCall) (string, error) {
 
 	return tool.Execute(call.Arguments)
 }
+
+func (r *Registry) Definitions() []llm.ToolDefinition {}
