@@ -49,4 +49,12 @@ func (r *Registry) Execute(call llm.ToolCall) (string, error) {
 	return tool.Execute(call.Arguments)
 }
 
-func (r *Registry) Definitions() []llm.ToolDefinition {}
+func (r *Registry) Definitions() []llm.ToolDefinition {
+	definitions := make([]llm.ToolDefinition, 0, len(r.tools))
+
+	for _, tool := range r.tools {
+		definitions = append(definitions, tool.Definition())
+	}
+
+	return definitions
+}
