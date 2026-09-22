@@ -2,6 +2,8 @@ package agent
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/alexnakagama/noryn/internal/llm"
@@ -27,29 +29,18 @@ func assistantWithToolCalls(ids ...string) llm.Message {
 func numberedHistory(length int) []llm.Message {
 	history := make([]llm.Message, length)
 	for i := range history {
-		history[i] = userMsg(fmt.Sprintf("m%d", i))
+		history[i] = userMsg(fmt.Sprintf("m%03d", i))
 	}
 
 	return history
 }
 
-func TestBuildAtLimitReturnsAll(t *testing.T) {
-	manager := &ContextManager{maxMessages: 5}
-	history := numberedHistory(5)
-
-	got := manager.Build(history)
-
-	if len(got) != 5 {
-		t.Fatalf("Build() returned %d messages, want 5", len(got))
-	}
-
-	if &got[0] != &history[0] {
-		t.Error("Build() copied the history instead of returning the original slice")
-	}
+func newTestManager(maxTokens int) *ContextManager {
+	return &ContextManager{maxTokens: maxTokens, tokenCounter: EstimateTokenCounter{}}
 }
 
 func TestBuildEmptyHistory(t *testing.T) {
-	manager := &ContextManager{maxMessages: 5}
+	manager := NewContextManager()
 
 	if got := manager.Build(nil); got != nil {
 		t.Errorf("Build(nil) = %+v, want nil", got)
@@ -60,293 +51,148 @@ func TestBuildEmptyHistory(t *testing.T) {
 	}
 }
 
-func TestBuildTrimsToMostRecent(t *testing.T) {
-	manager := &ContextManager{maxMessages: 3}
+func TestBuildReturnsSubslice(t *testing.T) {
+	history := numberedHistory(3)
+	manager := newTestManager(5)
 
-	for _, length := range []int{4, 5, 6, 10} {
-		t.Run(fmt.Sprintf("length-%d", length), func(t *testing.T) {
-			history := numberedHistory(length)
+	got := manager.Build(history)
 
-			got := manager.Build(history)
+	if len(got) != 3 {
+		t.Fatalf("Build() returned %d messages, want 3", len(got))
+	}
 
-			if len(got) != 3 {
-				t.Fatalf("Build() returned %d messages, want 3", len(got))
-			}
-
-			wantFirst := fmt.Sprintf("m%d", length-3)
-			if got[0].Content != wantFirst {
-				t.Errorf("first message = %q, want %q", got[0].Content, wantFirst)
-			}
-
-			wantLast := fmt.Sprintf("m%d", length-1)
-			if got[len(got)-1].Content != wantLast {
-				t.Errorf("last message = %q, want %q", got[len(got)-1].Content, wantLast)
-			}
-		})
+	if &got[0] != &history[0] {
+		t.Error("Build() copied the history instead of returning the original slice")
 	}
 }
 
-func TestBuildBoundaryLengths(t *testing.T) {
-	manager := NewContextManager()
-
-	tests := []struct {
-		name   string
-		length int
-	}{
-		{name: "one below limit", length: 99},
-		{name: "exactly at limit", length: 100},
-		{name: "one over limit", length: 101},
-		{name: "two over limit", length: 102},
-		{name: "three over limit", length: 103},
-		{name: "well over limit", length: 150},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			history := numberedHistory(tt.length)
-
-			got := manager.Build(history)
-
-			wantStart := tt.length - maxContextMessages
-			if wantStart < 0 {
-				wantStart = 0
-			}
-
-			wantLength := tt.length - wantStart
-			if len(got) != wantLength {
-				t.Fatalf("Build() returned %d messages, want %d", len(got), wantLength)
-			}
-
-			wantFirst := fmt.Sprintf("m%d", wantStart)
-			if got[0].Content != wantFirst {
-				t.Errorf("first message = %q, want %q", got[0].Content, wantFirst)
-			}
-
-			wantLast := fmt.Sprintf("m%d", tt.length-1)
-			if got[len(got)-1].Content != wantLast {
-				t.Errorf("last message = %q, want %q", got[len(got)-1].Content, wantLast)
-			}
-		})
-	}
-}
-
-func TestBuildDoesNotSplitSingleToolResult(t *testing.T) {
-	history := []llm.Message{
-		userMsg("u"),
-		assistantWithToolCalls("call-1"),
-		toolMsg("call-1"),
-	}
-
-	tests := []struct {
-		name        string
-		maxMessages int
-		wantLength  int
-	}{
-		{name: "back-off triggered", maxMessages: 1, wantLength: 2},
-		{name: "start lands on assistant", maxMessages: 2, wantLength: 2},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			manager := &ContextManager{maxMessages: tt.maxMessages}
-
-			got := manager.Build(history)
-
-			if len(got) != tt.wantLength {
-				t.Fatalf("Build() returned %d messages, want %d", len(got), tt.wantLength)
-			}
-
-			if got[0].Role != "assistant" {
-				t.Fatalf("first message role = %q, want %q", got[0].Role, "assistant")
-			}
-
-			if len(got[0].ToolCalls) != 1 || got[0].ToolCalls[0].ID != "call-1" {
-				t.Errorf("first message tool calls = %+v, want call-1", got[0].ToolCalls)
-			}
-
-			if got[1].Role != "tool" || got[1].ToolCallID != "call-1" {
-				t.Errorf("second message = %+v, want tool result call-1", got[1])
-			}
-		})
-	}
-}
-
-func TestBuildDoesNotSplitMultipleToolResults(t *testing.T) {
+func TestBuildDoesNotMutateInput(t *testing.T) {
 	history := []llm.Message{
 		userMsg("u"),
 		assistantWithToolCalls("call-1", "call-2"),
 		toolMsg("call-1"),
 		toolMsg("call-2"),
 	}
-	manager := &ContextManager{maxMessages: 2}
+	before := append([]llm.Message(nil), history...)
 
-	got := manager.Build(history)
+	manager := newTestManager(6)
+	manager.Build(history)
 
-	if len(got) != 3 {
-		t.Fatalf("Build() returned %d messages, want 3", len(got))
-	}
-
-	if got[0].Role != "assistant" || len(got[0].ToolCalls) != 2 {
-		t.Fatalf("first message = %+v, want assistant with 2 tool calls", got[0])
-	}
-
-	if got[0].ToolCalls[0].ID != "call-1" || got[0].ToolCalls[1].ID != "call-2" {
-		t.Errorf("tool call IDs = %+v, want call-1 then call-2", got[0].ToolCalls)
-	}
-
-	if got[1].ToolCallID != "call-1" {
-		t.Errorf("second message ToolCallID = %q, want %q", got[1].ToolCallID, "call-1")
-	}
-
-	if got[2].ToolCallID != "call-2" {
-		t.Errorf("third message ToolCallID = %q, want %q", got[2].ToolCallID, "call-2")
+	if !reflect.DeepEqual(history, before) {
+		t.Errorf("Build() mutated the input history: got %+v, want %+v", history, before)
 	}
 }
 
-func TestBuildBackoffReachesStartOfHistory(t *testing.T) {
-	history := []llm.Message{
-		assistantWithToolCalls("call-1"),
-		toolMsg("call-1"),
-		toolMsg("call-1"),
-		toolMsg("call-1"),
-	}
-	manager := &ContextManager{maxMessages: 2}
-
-	got := manager.Build(history)
-
-	if len(got) != len(history) {
-		t.Fatalf("Build() returned %d messages, want %d", len(got), len(history))
+func TestBuild(t *testing.T) {
+	zeroTokenHistory := make([]llm.Message, 10)
+	for i := range zeroTokenHistory {
+		zeroTokenHistory[i] = userMsg("a")
 	}
 
-	if got[0].Role != "assistant" || len(got[0].ToolCalls) != 1 {
-		t.Errorf("first message = %+v, want assistant with 1 tool call", got[0])
-	}
-}
-
-func TestBuildAllToolMessages(t *testing.T) {
-	history := []llm.Message{
-		toolMsg("call-1"),
-		toolMsg("call-1"),
-		toolMsg("call-1"),
-		toolMsg("call-1"),
-	}
-	manager := &ContextManager{maxMessages: 3}
-
-	got := manager.Build(history)
-
-	if len(got) != len(history) {
-		t.Fatalf("Build() returned %d messages, want %d", len(got), len(history))
-	}
-
-	for i, message := range got {
-		if message.Role != "tool" {
-			t.Errorf("message[%d] role = %q, want %q", i, message.Role, "tool")
-		}
-	}
-}
-
-func TestBuildStopsBackoffAtNonToolMessage(t *testing.T) {
-	history := []llm.Message{
-		userMsg("u"),
-		{Role: "assistant", Content: "plain"},
-		toolMsg("call-1"),
-		toolMsg("call-1"),
-	}
-	manager := &ContextManager{maxMessages: 2}
-
-	got := manager.Build(history)
-
-	if len(got) != 3 {
-		t.Fatalf("Build() returned %d messages, want 3", len(got))
-	}
-
-	if got[0].Role != "assistant" || len(got[0].ToolCalls) != 0 {
-		t.Errorf("first message = %+v, want assistant without tool calls", got[0])
-	}
-}
-
-func TestBuildTableDrivenSmallN(t *testing.T) {
 	tests := []struct {
 		name               string
-		maxMessages        int
+		maxTokens          int
 		history            []llm.Message
 		wantLength         int
 		wantFirstRole      string
 		wantFirstToolCalls int
+		wantFirstContent   string
 		wantLastToolCallID string
 	}{
 		{
-			name:        "start lands on assistant",
-			maxMessages: 2,
-			history: []llm.Message{
-				userMsg("u"),
-				assistantWithToolCalls("call-1"),
-				toolMsg("call-1"),
-			},
+			name:             "below limit returns all",
+			maxTokens:        5,
+			history:          numberedHistory(3),
+			wantLength:       3,
+			wantFirstRole:    "user",
+			wantFirstContent: "m000",
+		},
+		{
+			name:             "exactly at limit",
+			maxTokens:        3,
+			history:          numberedHistory(3),
+			wantLength:       3,
+			wantFirstRole:    "user",
+			wantFirstContent: "m000",
+		},
+		{
+			name:             "one over limit",
+			maxTokens:        3,
+			history:          numberedHistory(4),
+			wantLength:       3,
+			wantFirstRole:    "user",
+			wantFirstContent: "m001",
+		},
+		{
+			name:             "well over limit",
+			maxTokens:        3,
+			history:          numberedHistory(10),
+			wantLength:       3,
+			wantFirstRole:    "user",
+			wantFirstContent: "m007",
+		},
+		{
+			name:          "zero-token messages all fit",
+			maxTokens:     100,
+			history:       zeroTokenHistory,
+			wantLength:    10,
+			wantFirstRole: "user",
+		},
+		{
+			name:               "backoff starts on assistant",
+			maxTokens:          3,
+			history:            []llm.Message{userMsg("u"), assistantWithToolCalls("call-1"), toolMsg("call-1")},
 			wantLength:         2,
 			wantFirstRole:      "assistant",
 			wantFirstToolCalls: 1,
 			wantLastToolCallID: "call-1",
 		},
 		{
-			name:        "start lands mid tool run",
-			maxMessages: 1,
-			history: []llm.Message{
-				userMsg("u"),
-				assistantWithToolCalls("call-1"),
-				toolMsg("call-1"),
-			},
-			wantLength:         2,
-			wantFirstRole:      "assistant",
-			wantFirstToolCalls: 1,
-			wantLastToolCallID: "call-1",
-		},
-		{
-			name:        "multiple tool results kept together",
-			maxMessages: 2,
-			history: []llm.Message{
-				userMsg("u"),
-				assistantWithToolCalls("call-1", "call-2"),
-				toolMsg("call-1"),
-				toolMsg("call-2"),
-			},
+			name:               "multiple tool results kept together",
+			maxTokens:          6,
+			history:            []llm.Message{userMsg("u"), assistantWithToolCalls("call-1", "call-2"), toolMsg("call-1"), toolMsg("call-2")},
 			wantLength:         3,
 			wantFirstRole:      "assistant",
 			wantFirstToolCalls: 2,
 			wantLastToolCallID: "call-2",
 		},
 		{
-			name:        "back-off stops at history start",
-			maxMessages: 2,
-			history: []llm.Message{
-				assistantWithToolCalls("call-1"),
-				toolMsg("call-1"),
-				toolMsg("call-1"),
-				toolMsg("call-1"),
-			},
+			name:               "backoff reaches start of history",
+			maxTokens:          9,
+			history:            []llm.Message{assistantWithToolCalls("call-1"), toolMsg("call-1"), toolMsg("call-1"), toolMsg("call-1")},
 			wantLength:         4,
 			wantFirstRole:      "assistant",
 			wantFirstToolCalls: 1,
 			wantLastToolCallID: "call-1",
 		},
 		{
-			name:        "plain history trims without back-off",
-			maxMessages: 3,
-			history: []llm.Message{
-				userMsg("m0"),
-				userMsg("m1"),
-				userMsg("m2"),
-				userMsg("m3"),
-				userMsg("m4"),
-			},
-			wantLength:    3,
+			name:               "all tool messages",
+			maxTokens:          3,
+			history:            []llm.Message{toolMsg("call-1"), toolMsg("call-1"), toolMsg("call-1"), toolMsg("call-1")},
+			wantLength:         4,
+			wantFirstRole:      "tool",
+			wantLastToolCallID: "call-1",
+		},
+		{
+			name:               "backoff stops at non-tool message",
+			maxTokens:          3,
+			history:            []llm.Message{userMsg("u"), llm.Message{Role: "assistant", Content: "plain"}, toolMsg("call-1"), toolMsg("call-1")},
+			wantLength:         3,
+			wantFirstRole:      "assistant",
+			wantLastToolCallID: "call-1",
+		},
+		{
+			name:          "exactly at token budget",
+			maxTokens:     maxContextTokens,
+			history:       []llm.Message{userMsg(strings.Repeat("a", maxContextTokens*4))},
+			wantLength:    1,
 			wantFirstRole: "user",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager := &ContextManager{maxMessages: tt.maxMessages}
+			manager := newTestManager(tt.maxTokens)
 
 			got := manager.Build(tt.history)
 
@@ -362,11 +208,12 @@ func TestBuildTableDrivenSmallN(t *testing.T) {
 				t.Errorf("first message tool calls = %d, want %d", len(got[0].ToolCalls), tt.wantFirstToolCalls)
 			}
 
-			if tt.wantLastToolCallID != "" {
-				last := got[len(got)-1]
-				if last.ToolCallID != tt.wantLastToolCallID {
-					t.Errorf("last message ToolCallID = %q, want %q", last.ToolCallID, tt.wantLastToolCallID)
-				}
+			if tt.wantFirstContent != "" && got[0].Content != tt.wantFirstContent {
+				t.Errorf("first message content = %q, want %q", got[0].Content, tt.wantFirstContent)
+			}
+
+			if tt.wantLastToolCallID != "" && got[len(got)-1].ToolCallID != tt.wantLastToolCallID {
+				t.Errorf("last message ToolCallID = %q, want %q", got[len(got)-1].ToolCallID, tt.wantLastToolCallID)
 			}
 		})
 	}

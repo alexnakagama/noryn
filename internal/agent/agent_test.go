@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -756,15 +755,9 @@ func TestChatTruncatesLongToolResultsInHistory(t *testing.T) {
 func TestChatPassesBuiltHistoryToClient(t *testing.T) {
 	client := &stubClient{responses: []llm.Response{finalResponse("done")}}
 	agent := New(client)
-	agent.context = &ContextManager{maxMessages: 3}
+	agent.context = newTestManager(3)
 
-	history := []llm.Message{
-		{Role: "user", Content: "m0"},
-		{Role: "user", Content: "m1"},
-		{Role: "user", Content: "m2"},
-		{Role: "user", Content: "m3"},
-		{Role: "user", Content: "m4"},
-	}
+	history := numberedHistory(5)
 
 	_, err := agent.Chat(context.Background(), llm.Request{Messages: history})
 	if err != nil {
@@ -772,9 +765,9 @@ func TestChatPassesBuiltHistoryToClient(t *testing.T) {
 	}
 
 	assertMessages(t, client.requests[0].Messages, []llm.Message{
-		{Role: "user", Content: "m2"},
-		{Role: "user", Content: "m3"},
-		{Role: "user", Content: "m4"},
+		{Role: "user", Content: "m002"},
+		{Role: "user", Content: "m003"},
+		{Role: "user", Content: "m004"},
 	})
 }
 
@@ -784,13 +777,13 @@ func TestChatRebuildsHistoryAfterToolTurn(t *testing.T) {
 		finalResponse("done"),
 	}}
 	agent := New(client, fakeTool{})
-	agent.context = &ContextManager{maxMessages: 3}
+	agent.context = newTestManager(6)
 
 	_, err := agent.Chat(context.Background(), llm.Request{
 		Messages: []llm.Message{
-			{Role: "user", Content: "u0"},
-			{Role: "user", Content: "u1"},
-			{Role: "user", Content: "u2"},
+			{Role: "user", Content: "u000"},
+			{Role: "user", Content: "u001"},
+			{Role: "user", Content: "u002"},
 		},
 	})
 	if err != nil {
@@ -802,13 +795,13 @@ func TestChatRebuildsHistoryAfterToolTurn(t *testing.T) {
 	}
 
 	assertMessages(t, client.requests[0].Messages, []llm.Message{
-		{Role: "user", Content: "u0"},
-		{Role: "user", Content: "u1"},
-		{Role: "user", Content: "u2"},
+		{Role: "user", Content: "u000"},
+		{Role: "user", Content: "u001"},
+		{Role: "user", Content: "u002"},
 	})
 
 	assertMessages(t, client.requests[1].Messages, []llm.Message{
-		{Role: "user", Content: "u2"},
+		{Role: "user", Content: "u002"},
 		{Role: "assistant", Content: "calling tools"},
 		{Role: "tool", Content: "result(x)", ToolCallID: "call-1"},
 	})
@@ -822,7 +815,7 @@ func TestChatTrimsHistoryAtRealLimit(t *testing.T) {
 	for i := 0; i < 105; i++ {
 		history = append(history, llm.Message{
 			Role:    "user",
-			Content: fmt.Sprintf("m%d", i),
+			Content: strings.Repeat("a", maxContextTokens*4/100),
 		})
 	}
 
@@ -832,8 +825,8 @@ func TestChatTrimsHistoryAtRealLimit(t *testing.T) {
 	}
 
 	got := client.requests[0].Messages
-	if len(got) != maxContextMessages {
-		t.Fatalf("client received %d messages, want %d", len(got), maxContextMessages)
+	if len(got) != 100 {
+		t.Fatalf("client received %d messages, want %d", len(got), 100)
 	}
 
 	if got[0].Content != history[5].Content {
