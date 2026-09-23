@@ -34,4 +34,5 @@ type StreamChunk struct {
 	Content  string
 	ToolCall *ToolCall
 	Done     bool
+	Err      error
 }

@@ -1,12 +1,14 @@
 package openrouter
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/alexnakagama/noryn/internal/llm"
 )
@@ -29,6 +31,7 @@ type request struct {
 	Model    string    `json:"model"`
 	Messages []message `json:"messages"`
 	Tools    []tool    `json:"tools,omitempty"`
+	Stream   bool      `json:"stream,omitempty"`
 }
 
 type message struct {
@@ -68,6 +71,37 @@ type choice struct {
 	Message message `json:"message"`
 }
 
+type streamResponse struct {
+	Choices []streamChoice `json:"choices"`
+}
+
+type streamChoice struct {
+	Delta streamDelta `json:"delta"`
+}
+
+type streamDelta struct {
+	Content   string           `json:"content"`
+	ToolCalls []streamToolCall `json:"tool_calls"`
+}
+
+type streamToolCall struct {
+	Index    int                `json:"index"`
+	ID       string             `json:"id"`
+	Type     string             `json:"type"`
+	Function streamToolFunction `json:"function"`
+}
+
+type streamToolFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+type accumulatedToolCall struct {
+	ID        string
+	Name      string
+	Arguments strings.Builder
+}
+
 func convertTools(definitions []llm.ToolDefinition) []tool {
 	tools := make([]tool, 0, len(definitions))
 
@@ -85,10 +119,10 @@ func convertTools(definitions []llm.ToolDefinition) []tool {
 	return tools
 }
 
-func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error) {
-	messages := make([]message, 0, len(req.Messages))
+func convertMessages(messages []llm.Message) []message {
+	result := make([]message, 0, len(messages))
 
-	for _, msg := range req.Messages {
+	for _, msg := range messages {
 		message := message{
 			Role:       msg.Role,
 			Content:    msg.Content,
@@ -106,12 +140,16 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error
 			})
 		}
 
-		messages = append(messages, message)
+		result = append(result, message)
 	}
 
+	return result
+}
+
+func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error) {
 	body := request{
 		Model:    req.Model,
-		Messages: messages,
+		Messages: convertMessages(req.Messages),
 		Tools:    convertTools(req.Tools),
 	}
 
@@ -124,15 +162,11 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error
 		ctx,
 		http.MethodPost,
 		c.baseURL+"/chat/completions",
-		nil,
+		bytes.NewReader(data),
 	)
 	if err != nil {
 		return llm.Response{}, err
 	}
-
-	httpReq.Body = io.NopCloser(
-		bytes.NewReader(data),
-	)
 
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -186,4 +220,182 @@ func (c *Client) Chat(ctx context.Context, req llm.Request) (llm.Response, error
 		},
 		ToolCalls: toolCalls,
 	}, nil
+}
+
+func (c *Client) ChatStream(
+	ctx context.Context,
+	req llm.Request,
+) (<-chan llm.StreamChunk, error) {
+	body := request{
+		Model:    req.Model,
+		Messages: convertMessages(req.Messages),
+		Tools:    convertTools(req.Tools),
+		Stream:   true,
+	}
+
+	data, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		c.baseURL+"/chat/completions",
+		bytes.NewReader(data),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "text/event-stream")
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		defer resp.Body.Close()
+
+		responseBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf(
+			"openrouter returned status %d: %s",
+			resp.StatusCode,
+			string(responseBody),
+		)
+	}
+
+	chunks := make(chan llm.StreamChunk)
+
+	go func() {
+		defer close(chunks)
+		defer resp.Body.Close()
+
+		c.streamResponse(ctx, resp.Body, chunks)
+	}()
+
+	return chunks, nil
+}
+
+func (c *Client) streamResponse(
+	ctx context.Context,
+	body io.Reader,
+	chunks chan<- llm.StreamChunk,
+) {
+	scanner := bufio.NewScanner(body)
+
+	// Increase the scanner limit because tool arguments can be large.
+	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+
+	toolCalls := make(map[int]*accumulatedToolCall)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+
+		if data == "[DONE]" {
+			c.sendCompletedToolCalls(ctx, chunks, toolCalls)
+
+			select {
+			case chunks <- llm.StreamChunk{Done: true}:
+			case <-ctx.Done():
+			}
+
+			return
+		}
+
+		var event streamResponse
+
+		if err := json.Unmarshal([]byte(data), &event); err != nil {
+			c.sendStreamError(ctx, chunks, err)
+			return
+		}
+
+		for _, choice := range event.Choices {
+			if choice.Delta.Content != "" {
+				select {
+				case chunks <- llm.StreamChunk{
+					Content: choice.Delta.Content,
+				}:
+				case <-ctx.Done():
+					return
+				}
+			}
+
+			for _, call := range choice.Delta.ToolCalls {
+				accumulated, exists := toolCalls[call.Index]
+
+				if !exists {
+					accumulated = &accumulatedToolCall{}
+					toolCalls[call.Index] = accumulated
+				}
+
+				if call.ID != "" {
+					accumulated.ID = call.ID
+				}
+
+				if call.Function.Name != "" {
+					accumulated.Name = call.Function.Name
+				}
+
+				accumulated.Arguments.WriteString(call.Function.Arguments)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		c.sendStreamError(ctx, chunks, err)
+	}
+}
+
+func (c *Client) sendCompletedToolCalls(
+	ctx context.Context,
+	chunks chan<- llm.StreamChunk,
+	toolCalls map[int]*accumulatedToolCall,
+) {
+	for i := 0; ; i++ {
+		call, ok := toolCalls[i]
+		if !ok {
+			break
+		}
+
+		toolCall := llm.ToolCall{
+			ID:        call.ID,
+			Name:      call.Name,
+			Arguments: call.Arguments.String(),
+		}
+
+		select {
+		case chunks <- llm.StreamChunk{
+			ToolCall: &toolCall,
+		}:
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (c *Client) sendStreamError(
+	ctx context.Context,
+	chunks chan<- llm.StreamChunk,
+	err error,
+) {
+	select {
+	case chunks <- llm.StreamChunk{
+		Err: err,
+	}:
+	case <-ctx.Done():
+	}
 }
