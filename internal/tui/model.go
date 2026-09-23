@@ -14,3 +14,11 @@ type Model struct {
 	input  input.Model
 	status status.Model
 }
+
+func New() Model {
+	return Model{
+		chat:   chat.New(),
+		input:  input.New(),
+		status: status.New(),
+	}
+}
