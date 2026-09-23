@@ -110,6 +110,19 @@ func TestGitDiffTool_Execute(t *testing.T) {
 			want: "",
 		},
 		{
+			name:      "empty path shows the project diff",
+			arguments: `{"path":""}`,
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				initGitRepo(t, root)
+				createGitFile(t, root, "tracked.txt", "original\n")
+				commitAll(t, root, "initial")
+				createGitFile(t, root, "tracked.txt", "changed\n")
+			},
+			wantContains: []string{"-original", "+changed"},
+		},
+		{
 			name:      "rejects a path outside the project",
 			arguments: `{"path":"../../outside.txt"}`,
 			setup: func(t *testing.T, root string) {
@@ -158,10 +171,16 @@ func TestGitDiffTool_Execute(t *testing.T) {
 				if tt.wantErrContains != "" {
 					combined := strings.ToLower(err.Error() + "\n" + got)
 					want := strings.ToLower(tt.wantErrContains)
+
 					if !strings.Contains(combined, want) {
-						t.Errorf("Execute() error/output = %q, want it to contain %q", combined, tt.wantErrContains)
+						t.Errorf(
+							"Execute() error/output = %q, want it to contain %q",
+							combined,
+							tt.wantErrContains,
+						)
 					}
 				}
+
 				return
 			}
 
@@ -171,18 +190,30 @@ func TestGitDiffTool_Execute(t *testing.T) {
 
 			for _, substr := range tt.wantContains {
 				if !strings.Contains(got, substr) {
-					t.Errorf("Execute() output = %q, want it to contain %q", got, substr)
+					t.Errorf(
+						"Execute() output = %q, want it to contain %q",
+						got,
+						substr,
+					)
 				}
 			}
 
 			for _, substr := range tt.wantNotContains {
 				if strings.Contains(got, substr) {
-					t.Errorf("Execute() output = %q, want it NOT to contain %q", got, substr)
+					t.Errorf(
+						"Execute() output = %q, want it NOT to contain %q",
+						got,
+						substr,
+					)
 				}
 			}
 
 			if len(tt.wantContains) == 0 && got != tt.want {
-				t.Errorf("Execute() output = %q, want %q", got, tt.want)
+				t.Errorf(
+					"Execute() output = %q, want %q",
+					got,
+					tt.want,
+				)
 			}
 		})
 	}
