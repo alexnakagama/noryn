@@ -40,12 +40,32 @@ func (m Model) View() string {
 
 	mainWidth := m.width - lipgloss.Width(sidebar)
 
+	input := lipgloss.NewStyle().
+		Width(mainWidth - 4).
+		Render(m.input.View())
+
+	inputHeight := lipgloss.Height(input)
+
+	spacerHeight := m.height - inputHeight - 5
+	if spacerHeight < 0 {
+		spacerHeight = 0
+	}
+
+	spacer := lipgloss.NewStyle().
+		Height(spacerHeight).
+		Render("")
+
 	main := lipgloss.NewStyle().
 		Width(mainWidth).
 		Height(m.height).
 		Padding(1, 2).
 		Render(
-			"Conversation\n\n> _",
+			lipgloss.JoinVertical(
+				lipgloss.Left,
+				"Conversation",
+				spacer,
+				input,
+			),
 		)
 
 	return lipgloss.JoinHorizontal(
