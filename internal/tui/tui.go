@@ -5,10 +5,15 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func Run(a *agent.Agent) error {
-	model := New(a)
+func Run(a *agent.Agent, model string, projectInstructions string, projectContext string) error {
+	m := New(
+		a,
+		model,
+		projectInstructions,
+		projectContext,
+	)
 
-	program := tea.NewProgram(model)
+	program := tea.NewProgram(m)
 
 	_, err := program.Run()
 

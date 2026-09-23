@@ -12,18 +12,25 @@ type Model struct {
 	width  int
 	height int
 
-	agent  *agent.Agent
+	agent               *agent.Agent
+	model               string
+	projectInstructions string
+	projectContext      string
+
 	chat   chat.Model
 	input  input.Model
 	status status.Model
 }
 
-func New(a *agent.Agent) Model {
+func New(a *agent.Agent, model, projectInstructions, projectContext string) Model {
 	return Model{
-		agent:  a,
-		chat:   chat.New(),
-		input:  input.New(),
-		status: status.New(),
+		agent:               a,
+		model:               model,
+		projectInstructions: projectInstructions,
+		projectContext:      projectContext,
+		chat:                chat.New(),
+		input:               input.New(),
+		status:              status.New(),
 	}
 }
 
