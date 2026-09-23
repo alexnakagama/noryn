@@ -26,15 +26,15 @@ func (m Model) View() string {
 		BorderForeground(styles.ColorBlue).
 		Padding(1, 2).
 		Render(
-			"STATUS\n\n" +
+			"STATUS\n" +
 				"● Ready\n\n" +
-				"PROJECT\n\n" +
+				"PROJECT\n" +
 				"noryn\n\n" +
-				"BRANCH\n\n" +
+				"BRANCH\n" +
 				"main\n\n" +
-				"MODEL\n\n" +
+				"MODEL\n" +
 				"gpt-5.6\n\n" +
-				"USAGE\n\n" +
+				"USAGE\n" +
 				"12.4k tokens",
 		)
 
