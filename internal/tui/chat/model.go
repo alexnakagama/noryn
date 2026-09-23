@@ -1,10 +1,5 @@
 package chat
 
-type Message struct {
-	Role    string
-	Content string
-}
-
 type Model struct {
 	messages  []Message
 	streaming bool
@@ -47,7 +42,9 @@ func (m Model) AppendAssistantContent(content string) Model {
 		return m
 	}
 
-	last.Content += content
+	last.Parts = append(last.Parts, TextPart{
+		Content: content,
+	})
 
 	return m
 }
@@ -60,13 +57,4 @@ func (m Model) FinishStreaming() Model {
 
 func (m Model) IsStreaming() bool {
 	return m.streaming
-}
-
-func (m Model) AddToolMessage(content string) Model {
-	m.messages = append(m.messages, Message{
-		Role:    "tool",
-		Content: content,
-	})
-
-	return m
 }
