@@ -8,6 +8,6 @@ import (
 func Run(a *agent.Agent, model, projectInstructions, projectContext string) error {
 	app := New(a, model, projectInstructions, projectContext)
 
-	_, err := tea.NewProgram(app).Run()
+	_, err := tea.NewProgram(app, tea.WithAltScreen()).Run()
 	return err
 }
