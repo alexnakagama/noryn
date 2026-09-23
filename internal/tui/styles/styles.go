@@ -28,7 +28,6 @@ func Tagline(version string) string {
 
 var (
 	AppStyle = lipgloss.NewStyle().
-			Background(ColorBase).
 			Foreground(ColorText)
 
 	TitleStyle = lipgloss.NewStyle().
