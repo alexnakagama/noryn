@@ -2,25 +2,48 @@
 
 Noryn is an AI coding agent that runs in your terminal. Built in Go, it pairs an LLM with a set of curated, project-scoped tools so you can explore, understand, and modify a codebase from the command line.
 
-Noryn is an agent orchestration layer — it does not train or implement models. It delegates reasoning to your chosen LLM provider and focuses on the parts that matter around it: tool calling, context assembly, and safe execution.
+Noryn is an **agent orchestration layer**, not a model. It delegates reasoning to your chosen LLM provider and focuses on everything around it: tool calling, context assembly, history management, and safe execution.
 
-> **Status:** early-stage. The core agent loop and tooling work, but expect rough edges and ongoing change.
+> **Status:** early-stage. The agent loop, tooling, and context management work, and a Bubble Tea TUI is under active development. Expect rough edges and ongoing change.
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Supported tools](#supported-tools)
+- [How it works](#how-it-works)
+- [Context management](#context-management)
+- [Safety model](#safety-model)
+- [Project structure](#project-structure)
+- [Development](#development)
+- [Roadmap](#roadmap)
+
+---
 
 ## Features
 
-- Interactive REPL driven by an LLM
-- Project discovery via `go.mod`
-- Agent loop with automatic tool-call handling
-- Tools for filesystem access, shell execution, search, and Git inspection
-- All file operations confined to the project root
-- Project-specific instructions loaded from `AGENTS.md`
-- Swappable LLM providers (OpenAI, OpenRouter, Fake)
-- Provider and model selection via `.env` or CLI flags
+- **Terminal UI** built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), featuring a welcome screen and an interactive chat screen
+- **Project discovery** by walking up to the nearest `go.mod`
+- **Project context assembly** — a snapshot of the project's text files is loaded into the initial prompt
+- **Project-specific instructions** loaded from `AGENTS.md`
+- **Agent loop** with automatic, validated tool calls
+- **Streaming and non-streaming** agent execution with a unified event stream
+- **Context management** — conversation history is trimmed to a token budget, and tool results are truncated to keep prompts bounded
+- **8 built-in tools** covering filesystem, search, shell, and Git inspection
+- **Path confinement** — file operations cannot escape the project root
+- **Swappable LLM providers** — OpenAI, OpenRouter, and a deterministic Fake provider for testing
+- **Provider and model selection** via `.env` or CLI flags
 
 ## Requirements
 
-- Go 1.27 or newer
-- An API key for your chosen LLM provider
+- **Go 1.27 or newer**
+- **An API key** for your chosen LLM provider (OpenAI or OpenRouter)
+- **Git** on your `PATH` (for the Git tools)
 
 ## Installation
 
@@ -37,9 +60,15 @@ go build -o noryn ./cmd/noryn
 ./noryn
 ```
 
+You may want to move the binary onto your `PATH`:
+
+```bash
+mv noryn /usr/local/bin/noryn
+```
+
 ## Configuration
 
-Noryn reads configuration from a `.env` file in the directory where it is run. The file must exist; copy the template below and fill it in:
+Noryn reads configuration from a `.env` file in the directory where it is run (via `godotenv`). The file must exist; copy the template below and fill it in:
 
 ```bash
 # .env
@@ -60,9 +89,20 @@ CLI flags override the configured provider and model per session:
 
 ```bash
 go run ./cmd/noryn --provider openrouter --model anthropic/claude-sonnet-4
+go run ./cmd/noryn --provider fake
 ```
 
-Never commit API keys or your `.env` file to a repository.
+> **Security:** never commit API keys or your `.env` file to a repository. `.env` is already listed in `.gitignore`.
+
+### Providers
+
+| Provider      | Value        | Requires             | Streaming |
+| ------------- | ------------ | -------------------- | --------- |
+| OpenAI        | `openai`     | `OPENAI_API_KEY`     | No        |
+| OpenRouter    | `openrouter` | `OPENROUTER_API_KEY` | Yes       |
+| Fake          | `fake`       | —                    | No        |
+
+The Fake provider is deterministic and used for local testing of the agent loop without any external calls.
 
 ## Usage
 
@@ -72,51 +112,63 @@ Start Noryn from the root of a Go project:
 noryn
 ```
 
-You get an interactive prompt:
+A full-screen welcome screen appears:
 
+```text
+   ███╗   ██╗ ██████╗ ██████╗ ██╗   ██╗███╗   ██╗
+   ████╗  ██║██╔═══██╗██╔══██╗╚██╗ ██╔╝████╗  ██║
+   ██╔██╗ ██║██║   ██║██████╔╝ ╚████╔╝ ██╔██╗ ██║
+   ██║╚██╗██║██║   ██║██╔══██╗  ╚██╔╝  ██║╚██╗██║
+   ██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║ ╚████║
+   ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝
+
+Noryn v0.1.0 — AI coding assistant
+
+                      Press Enter to start
 ```
-Noryn
-Type 'exit' to quit.
 
-noryn> What does this project do?
-```
+Press `Enter` to open the chat screen, which shows a conversation area, an input bar, and a sidebar with status, project, branch, model, and token usage.
 
-Type `exit` to quit. Each prompt is combined with the discovered project context and your `AGENTS.md` instructions before being sent to the model. The agent may invoke tools to inspect files, run commands, or check Git state, and it keeps calling tools until it has enough context to answer.
+Each prompt is combined with the discovered project context and your `AGENTS.md` instructions before being sent to the model. The agent calls tools to inspect files, run commands, or check Git state, and keeps iterating until it has enough context to answer.
 
-### Supported tools
+## Supported tools
 
-| Tool             | Purpose                                            |
-| ---------------- | -------------------------------------------------- |
-| `read_file`      | Read a file inside the project                     |
-| `write_file`     | Write a file inside the project                    |
-| `list_directory` | List directory contents                            |
-| `shell`          | Execute commands from the project root             |
-| `search`         | Recursive text search (skips binaries, `.git`, …)  |
-| `git_status`     | Short status of the working tree                   |
-| `git_diff`       | Diff of the working tree, optionally per path      |
-| `git_log`        | Recent commit history with configurable limit      |
+| Tool             | Purpose                                                        | Limits                                          |
+| ---------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| `read_file`      | Read a file inside the project                                 | Files up to 1 MB                                |
+| `write_file`     | Write content to a file inside the project                     | —                                               |
+| `list_directory` | List the contents of a project directory                       | —                                               |
+| `shell`          | Execute a shell command from the project root                  | 30-second timeout                               |
+| `search`         | Recursive text search with `path:line:content` results         | Skips binaries, files > 1 MB, up to 200 matches |
+| `git_status`     | Short status of the working tree                               | Read-only                                       |
+| `git_diff`       | Diff of the working tree, optionally scoped to a path          | Read-only                                       |
+| `git_log`        | Recent commit history with a configurable limit (1–50)         | Read-only                                       |
+
+Search and project context both skip common irrelevant directories (`.git`, `node_modules`, `vendor`), binary files, and oversized files.
 
 ## How it works
 
 ```text
 User
   ↓
-CLI
+TUI (Bubble Tea)
   ↓
-Project Discovery
+Project Discovery        → find nearest go.mod
   ↓
-Instructions Builder
+Project Context          → snapshot of repo text files
+  ↓
+Instructions Builder     → load AGENTS.md + system prompt
   ↓
 Agent
-  ├── LLM Client
-  └── Tools
-       ├── Filesystem
-       ├── Search
-       ├── Shell
-       └── Git
+  ├── LLM Client          → provider abstraction
+  ├── Context Manager     → token-budgeted history
+  ├── Tool Registry       → validates and executes tool calls
+  └── Event Stream        → text, tool calls, tool results, done, error
 ```
 
-The agent loop:
+### The agent loop
+
+Non-streaming (`Chat`):
 
 ```text
 Prompt → Send to LLM → Tool requested?
@@ -124,14 +176,45 @@ Prompt → Send to LLM → Tool requested?
   └── Yes → Execute tool → Feed result back → Repeat
 ```
 
-Noryn exposes the available tools, validates and executes tool calls, and feeds results back to the model until it responds without requesting a tool.
+Streaming (`ChatStream`):
 
-### Safety model
+```text
+Prompt → Stream chunks from LLM
+          ├── text chunk  → emit EventText
+          └── tool call   → emit EventToolCall, execute, emit EventToolResult
+        → emit EventDone / EventError when finished
+```
 
-- Filesystem paths are resolved relative to the discovered project root and cannot escape it.
-- Shell commands run inside the project directory.
-- Git tools are read-only; they never modify the working tree or history.
-- Actions are driven by explicit tool calls from the model rather than hidden side effects.
+In both paths Noryn exposes the available tools, validates tool calls through the registry, executes them, and feeds results back to the model until it responds without requesting a tool.
+
+### Startup flow
+
+`cmd/noryn/main.go` wires everything together:
+
+1. Load configuration from `.env` (overridable with `--provider` and `--model`).
+2. Discover the project root by searching upward for `go.mod`.
+3. Build the project context (a structured snapshot of the repo's text files).
+4. Build the LLM instructions from the system prompt and the project's `AGENTS.md`.
+5. Pick the LLM provider based on configuration.
+6. Register all tools in the `tools.Registry`.
+7. Create the `agent.Agent` and hand it to the TUI.
+
+## Context management
+
+Noryn keeps the conversation bounded so prompts stay within the model's context window:
+
+- **Token budget** — the `ContextManager` keeps the most recent messages that fit within a 32,000-token budget, using a rough estimate (4 characters ≈ 1 token).
+- **Turn integrity** — trimming never starts mid-way through a tool-call turn, so the model never sees orphaned `tool` messages.
+- **Tool-result truncation** — individual tool results are capped at 10,000 characters and flagged as truncated.
+- **Iteration guard** — the agent stops after 20 consecutive tool iterations to prevent runaway loops.
+
+## Safety model
+
+- **Path confinement** — filesystem paths are resolved relative to the discovered project root and cannot escape it.
+- **Binary detection** — project context and search skip binary files automatically.
+- **Shell scope** — shell commands run inside the project directory with a hard timeout.
+- **Read-only Git** — Git tools only inspect state; they never modify the working tree or history.
+- **Explicit actions** — all operations are driven by explicit tool calls from the model rather than hidden side effects.
 
 ## Project structure
 
@@ -139,20 +222,34 @@ Noryn exposes the available tools, validates and executes tool calls, and feeds 
 noryn/
 ├── cmd/
 │   └── noryn/
-│       └── main.go
+│       └── main.go               entry point: wiring, flags, startup
 ├── internal/
-│   ├── agent/          agent loop and orchestration
-│   ├── config/         .env loading and defaults
-│   ├── context/        project context assembly
-│   ├── instructions/   AGENTS.md loading
-│   ├── llm/            provider abstraction and types
-│   │   └── providers/  fake, openai, openrouter
-│   ├── project/        root discovery and safe path resolution
-│   └── tools/          filesystem, search, shell, and git tools
+│   ├── agent/                    agent loop, context manager, streaming events
+│   ├── config/                   .env loading and defaults
+│   ├── instructions/             system prompt, AGENTS.md loading, prompt assembly
+│   ├── llm/                      provider abstraction and shared types
+│   │   └── providers/            fake, openai, openrouter, provider factory
+│   ├── project/                  root discovery, safe path resolution, context
+│   ├── tools/                    tool interface, registry, and 8 tools
+│   └── tui/                      Bubble Tea UI, screen router, styles
 ├── AGENTS.md
 ├── go.mod
-└── go.sum
+├── go.sum
+└── .gitignore
 ```
+
+### Package overview
+
+| Package       | Responsibility                                                            |
+| ------------- | ------------------------------------------------------------------------- |
+| `agent`       | Runs the agent loop (`Chat`/`ChatStream`), manages history and token budget |
+| `config`      | Loads configuration from `.env` and applies defaults                      |
+| `instructions`| Builds the system prompt, loads `AGENTS.md`, assembles the initial prompt  |
+| `llm`         | Defines `Client`/`StreamingClient` and the request/response types          |
+| `providers`   | Factory for Fake, OpenAI, and OpenRouter clients                           |
+| `project`     | Finds the project root, resolves paths safely, builds project context      |
+| `tools`       | `Tool` interface, `Registry`, and the concrete tools                       |
+| `tui`         | Bubble Tea application with welcome and chat screens                       |
 
 ## Development
 
@@ -162,14 +259,17 @@ go test ./...
 go build ./...
 ```
 
-Provider-specific behavior is tested with deterministic HTTP test servers rather than live API calls. Any meaningful change should include tests.
+- Every meaningful change should include tests.
+- Provider-specific behavior is tested with deterministic HTTP test servers rather than live API calls.
+- Tests currently cover the agent loop and context manager, tool registration and execution, filesystem and search tools, Git tools, project discovery and path confinement, instructions loading, and provider behavior.
 
 ## Roadmap
 
-- Improve context management and agent reliability
-- Add conversation history
+- Wire the chat screen to the streaming agent (prompt dispatch, live responses)
+- Add conversation history persistence
 - Add safer file-editing capabilities
 - Add tool-execution confirmations and permissions
-- Improve CLI and TUI interaction
+- Improve context management and agent reliability
 - Add additional LLM providers
-- Add Git modification capabilities
+- Add Git modification capabilities carefully
+- Improve TUI interaction (a real live-conversation view, multiple sessions)
