@@ -37,8 +37,14 @@ func TestShellTool_Execute(t *testing.T) {
 			wantOutput: "a\nbc",
 		},
 		{
-			name: "empty command succeeds",
-			args: `{"command":""}`,
+			name:    "empty command returns an error",
+			args:    `{"command":""}`,
+			wantErr: true,
+		},
+		{
+			name:    "missing command returns an error",
+			args:    `{}`,
+			wantErr: true,
 		},
 		{
 			name:       "failing command returns its combined output and error",
@@ -57,9 +63,8 @@ func TestShellTool_Execute(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:       "runs command from project root",
-			args:       `{"command":"pwd"}`,
-			wantOutput: "",
+			name: "runs command from project root",
+			args: `{"command":"pwd"}`,
 		},
 		{
 			name: "can access files from project root",
@@ -69,7 +74,11 @@ func TestShellTool_Execute(t *testing.T) {
 
 				path := filepath.Join(root, "test.txt")
 
-				if err := os.WriteFile(path, []byte("hello from project\n"), 0644); err != nil {
+				if err := os.WriteFile(
+					path,
+					[]byte("hello from project\n"),
+					0644,
+				); err != nil {
 					t.Fatalf("os.WriteFile() error = %v", err)
 				}
 			},
@@ -110,6 +119,7 @@ func TestShellTool_Execute(t *testing.T) {
 				if err == nil {
 					t.Fatal("Execute() error = nil, want an error")
 				}
+
 				return
 			}
 
