@@ -18,7 +18,6 @@ func New() Model {
 	input := textarea.New()
 
 	input.Placeholder = "Ask Noryn anything..."
-	input.Prompt = "> "
 	input.CharLimit = 0
 	input.ShowLineNumbers = false
 	input.SetHeight(5)

@@ -7,22 +7,42 @@ import (
 )
 
 func (m Model) View() string {
-	var sections []string
+	if m.width == 0 || m.height == 0 {
+		return ""
+	}
 
-	sections = append(sections, LogoStyle.Render("NORYN"))
-	sections = append(sections, "")
+	header := LogoStyle.Render("NORYN")
 
-	sections = append(sections, m.chat.View())
+	chat := m.chat.View()
 
-	sections = append(sections, "")
-	sections = append(sections, m.input.View())
+	input := m.input.View()
 
-	sections = append(sections, "")
-	sections = append(sections, m.status.View())
+	status := StatusBarStyle.Render(m.status.View())
 
-	content := strings.Join(sections, "\n")
+	availableHeight := m.height -
+		lipgloss.Height(header) -
+		lipgloss.Height(input) -
+		lipgloss.Height(status) -
+		6
 
-	return lipgloss.NewStyle().
+	if availableHeight < 1 {
+		availableHeight = 1
+	}
+
+	chatArea := lipgloss.NewStyle().
+		Height(availableHeight).
+		Render(chat)
+
+	content := strings.Join([]string{
+		header,
+		"",
+		chatArea,
+		input,
+		"",
+		status,
+	}, "\n")
+
+	return AppStyle.
 		Width(m.width).
 		Height(m.height).
 		Render(content)
