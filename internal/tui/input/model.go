@@ -9,6 +9,10 @@ type Model struct {
 	textarea textarea.Model
 }
 
+type SubmitMessage struct {
+	Content string
+}
+
 func New() Model {
 	input := textarea.New()
 
@@ -22,6 +26,25 @@ func New() Model {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if msg.Type == tea.KeyEnter {
+			content := m.Value()
+
+			if content == "" {
+				return m, nil
+			}
+
+			m.Reset()
+
+			return m, func() tea.Msg {
+				return SubmitMessage{
+					Content: content,
+				}
+			}
+		}
+	}
+
 	var cmd tea.Cmd
 
 	m.textarea, cmd = m.textarea.Update(msg)
