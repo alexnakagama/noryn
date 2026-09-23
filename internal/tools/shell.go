@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/project"
 )
+
+const defaultShellTimeout = 30 * time.Second
 
 type ShellTool struct {
 	project *project.Project
