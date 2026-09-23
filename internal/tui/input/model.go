@@ -18,6 +18,7 @@ func New() Model {
 	input := textarea.New()
 
 	input.Placeholder = "Ask Noryn anything..."
+	input.Prompt = "> "
 	input.CharLimit = 0
 	input.ShowLineNumbers = false
 	input.SetHeight(5)
@@ -83,4 +84,8 @@ func (m *Model) Reset() {
 
 func (m *Model) Focus() tea.Cmd {
 	return m.textarea.Focus()
+}
+
+func (m *Model) SetWidth(width int) {
+	m.textarea.SetWidth(width)
 }
