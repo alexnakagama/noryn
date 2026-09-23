@@ -2,6 +2,7 @@ package tools
 
 import (
 	"encoding/json"
+	"fmt"
 	"os/exec"
 
 	"github.com/alexnakagama/noryn/internal/llm"
@@ -53,6 +54,10 @@ func (t *ShellTool) Execute(arguments string) (string, error) {
 	err := json.Unmarshal([]byte(arguments), &args)
 	if err != nil {
 		return "", err
+	}
+
+	if args.Command == "" {
+		return "", fmt.Errorf("command cannot be empty")
 	}
 
 	cmd := exec.Command("sh", "-c", args.Command)
