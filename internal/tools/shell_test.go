@@ -3,7 +3,9 @@ package tools
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/alexnakagama/noryn/internal/project"
 )
@@ -127,5 +129,32 @@ func TestShellTool_Execute(t *testing.T) {
 				t.Fatalf("Execute() error = %v", err)
 			}
 		})
+	}
+}
+
+func TestShellTool_Timeout(t *testing.T) {
+	root := t.TempDir()
+
+	p := &project.Project{
+		Root: root,
+	}
+
+	tool := NewShellTool(p)
+
+	// Short timeout so the test finishes quickly.
+	tool.timeout = 50 * time.Millisecond
+
+	got, err := tool.Execute(`{"command":"sleep 1"}`)
+
+	if err == nil {
+		t.Fatal("Execute() error = nil, want timeout error")
+	}
+
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Errorf("Execute() error = %q, want timeout error", err)
+	}
+
+	if got != "" {
+		t.Errorf("Execute() output = %q, want empty output", got)
 	}
 }
