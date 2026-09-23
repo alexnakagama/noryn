@@ -7,27 +7,63 @@ import (
 )
 
 const (
-	inputBackground      = "#16181F"
-	cursorLineBackground = "#1A1D2E"
-	inputBorder          = "#303640"
-	inputBorderFocused   = "#7AA2F7"
-	inputMuted           = "#7C8594"
-	inputPrompt          = "#7AA2F7"
-	inputText            = "#D8DEE9"
+	inputBackground    = "#16181F"
+	inputBorder        = "#303640"
+	inputBorderFocused = "#7AA2F7"
+	inputMuted         = "#7C8594"
+	inputPrompt        = "#7AA2F7"
+	inputText          = "#D8DEE9"
+	inputHeight        = 3
 )
 
 func (m Model) View() string {
-	border := inputBorder
-	if m.textarea.Focused() {
-		border = inputBorderFocused
+	innerWidth := m.width - 4
+
+	if innerWidth < 1 {
+		innerWidth = 1
 	}
 
-	box := lipgloss.NewStyle().
-		Background(lipgloss.Color(inputBackground)).
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(border)).
-		Padding(0, 1).
-		Render(m.textarea.View())
+	borderColor := inputBorder
+	if m.textarea.Focused() {
+		borderColor = inputBorderFocused
+	}
+
+	panel := lipgloss.NewStyle().
+		Background(lipgloss.Color(inputBackground))
+
+	border := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(borderColor)).
+		Background(lipgloss.Color(inputBackground))
+
+	lines := strings.Split(recolorTransparentSpaces(m.textarea.View(), panel), "\n")
+	if len(lines) > inputHeight {
+		lines = lines[:inputHeight]
+	}
+	for len(lines) < inputHeight {
+		lines = append(lines, "")
+	}
+
+	var b strings.Builder
+
+	b.WriteString(border.Render("╭" + strings.Repeat("─", innerWidth+2) + "╮"))
+	b.WriteString("\n")
+
+	for _, line := range lines {
+		visible := lipgloss.Width(line)
+
+		if visible < innerWidth {
+			line += panel.Render(strings.Repeat(" ", innerWidth-visible))
+		}
+
+		b.WriteString(border.Render("│"))
+		b.WriteString(panel.Render(" "))
+		b.WriteString(line)
+		b.WriteString(panel.Render(" "))
+		b.WriteString(border.Render("│"))
+		b.WriteString("\n")
+	}
+
+	b.WriteString(border.Render("╰" + strings.Repeat("─", innerWidth+2) + "╯"))
 
 	hintStyle := lipgloss.NewStyle().
 		Background(lipgloss.Color(inputBackground)).
@@ -45,7 +81,62 @@ func (m Model) View() string {
 		hintText += strings.Repeat(" ", pad) + m.hintRight
 	}
 
-	hint := hintStyle.Render(hintText)
+	return b.String() + "\n" + hintStyle.Render(hintText)
+}
 
-	return box + "\n" + hint
+// recolorTransparentSpaces re-emits any space cell that was drawn without an
+// active background so the input area is fully opaque even though the
+// underlying textarea may pad its lines with unstyled spaces.
+func recolorTransparentSpaces(s string, panel lipgloss.Style) string {
+	var out strings.Builder
+	out.Grow(len(s))
+
+	activeBG := false
+	i := 0
+
+	for i < len(s) {
+		if s[i] == '\x1b' {
+			if i+1 < len(s) && s[i+1] == '[' {
+				j := i + 2
+
+				for j < len(s) && s[j] != 'm' {
+					j++
+				}
+
+				if j < len(s) {
+					out.WriteString(s[i : j+1])
+
+					for _, p := range strings.Split(s[i+2:j], ";") {
+						switch {
+						case p == "0" || p == "" || p == "49":
+							activeBG = false
+						case strings.HasPrefix(p, "48"):
+							activeBG = true
+						}
+					}
+
+					i = j + 1
+					continue
+				}
+			}
+
+			out.WriteByte(s[i])
+			i++
+			continue
+		}
+
+		switch {
+		case s[i] == '\n':
+			out.WriteByte(s[i])
+			activeBG = false
+		case s[i] == ' ' && !activeBG:
+			out.WriteString(panel.Render(" "))
+		default:
+			out.WriteByte(s[i])
+		}
+
+		i++
+	}
+
+	return out.String()
 }

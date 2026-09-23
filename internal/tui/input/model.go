@@ -35,34 +35,36 @@ func New() Model {
 	panel := lipgloss.NewStyle().
 		Background(lipgloss.Color(inputBackground))
 
+	panelText := lipgloss.NewStyle().
+		Background(lipgloss.Color(inputBackground)).
+		Foreground(lipgloss.Color(inputText))
+
 	input.FocusedStyle.Base = panel
 	input.BlurredStyle.Base = panel
 
-	input.FocusedStyle.CursorLine = lipgloss.NewStyle().
-		Background(lipgloss.Color(cursorLineBackground))
-
-	input.FocusedStyle.Text = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(inputText))
+	input.FocusedStyle.CursorLine = panelText
+	input.FocusedStyle.Text = panelText
 
 	input.FocusedStyle.Prompt = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(inputPrompt)).
+		Background(lipgloss.Color(inputBackground)).
 		Bold(true)
 
 	input.FocusedStyle.Placeholder = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(inputMuted))
+		Foreground(lipgloss.Color(inputMuted)).
+		Background(lipgloss.Color(inputBackground))
 
-	input.BlurredStyle.CursorLine = lipgloss.NewStyle().
-		Background(lipgloss.Color(cursorLineBackground))
-
-	input.BlurredStyle.Text = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(inputText))
+	input.BlurredStyle.CursorLine = panelText
+	input.BlurredStyle.Text = panelText
 
 	input.BlurredStyle.Prompt = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(inputPrompt)).
+		Background(lipgloss.Color(inputBackground)).
 		Bold(true)
 
 	input.BlurredStyle.Placeholder = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(inputMuted))
+		Foreground(lipgloss.Color(inputMuted)).
+		Background(lipgloss.Color(inputBackground))
 
 	input.Focus()
 
