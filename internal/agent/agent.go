@@ -21,24 +21,18 @@ func truncateToolResult(result string) string {
 
 type Agent struct {
 	client       llm.Client
-	tools        map[string]tools.Tool
+	registry     *tools.Registry
 	history      []llm.Message
 	context      *ContextManager
 	onToolCall   func(llm.ToolCall)
 	onToolResult func(llm.ToolCall, string)
 }
 
-func New(client llm.Client, toolList ...tools.Tool) *Agent {
-	toolMap := make(map[string]tools.Tool)
-
-	for _, tool := range toolList {
-		toolMap[tool.Name()] = tool
-	}
-
+func New(client llm.Client, registry *tools.Registry) *Agent {
 	return &Agent{
-		client:  client,
-		tools:   toolMap,
-		context: NewContextManager(),
+		client:   client,
+		registry: registry,
+		context:  NewContextManager(),
 	}
 }
 
@@ -53,7 +47,7 @@ func (a *Agent) SetToolResultHandler(handler func(llm.ToolCall, string)) {
 func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, error) {
 	a.history = append(a.history, request.Messages...)
 	request.Messages = a.context.Build(a.history)
-	request.Tools = a.toolDefinitions()
+	request.Tools = a.registry.Definitions()
 
 	toolIterations := 0
 
@@ -81,7 +75,7 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 				a.onToolCall(call)
 			}
 
-			result, err := a.executeTool(call)
+			result, err := a.registry.Execute(call)
 			if err != nil {
 				result = "tool error: " + err.Error()
 			}
@@ -101,23 +95,4 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 
 		request.Messages = a.context.Build(a.history)
 	}
-}
-
-func (a *Agent) executeTool(call llm.ToolCall) (string, error) {
-	tool, ok := a.tools[call.Name]
-	if !ok {
-		return "", fmt.Errorf("tool not found: %s", call.Name)
-	}
-
-	return tool.Execute(call.Arguments)
-}
-
-func (a *Agent) toolDefinitions() []llm.ToolDefinition {
-	definitions := make([]llm.ToolDefinition, 0, len(a.tools))
-
-	for _, tool := range a.tools {
-		definitions = append(definitions, tool.Definition())
-	}
-
-	return definitions
 }
