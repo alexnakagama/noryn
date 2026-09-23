@@ -2,11 +2,14 @@ package tools
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/project"
 )
+
+const maxFileSize = 1 << 20 // 1 MB
 
 type ReadFileTool struct {
 	project *project.Project
@@ -58,6 +61,15 @@ func (t *ReadFileTool) Execute(arguments string) (string, error) {
 	path, err := t.project.ResolvePath(args.Path)
 	if err != nil {
 		return "", err
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+
+	if info.Size() > maxFileSize {
+		return "", fmt.Errorf("file exceeds maximum size of 1 MB")
 	}
 
 	data, err := os.ReadFile(path)
