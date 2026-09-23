@@ -13,16 +13,16 @@ func (m Model) View() string {
 	main := lipgloss.NewStyle().
 		Width(mainWidth).
 		Height(m.height).
+		Padding(1, 2).
 		Render(
-			"Chat",
+			"Conversation\n\n> _",
 		)
 
 	sidebar := lipgloss.NewStyle().
 		Width(sidebarWidth).
 		Height(m.height).
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(styles.ColorOverlay).
 		Padding(1, 2).
+		Background(styles.ColorSurface).
 		Render(
 			"STATUS\n\n" +
 				"● Ready\n\n" +
