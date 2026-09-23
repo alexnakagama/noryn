@@ -14,6 +14,7 @@ const defaultShellTimeout = 30 * time.Second
 
 type ShellTool struct {
 	project *project.Project
+	timeout time.Duration
 }
 
 type shellArguments struct {
