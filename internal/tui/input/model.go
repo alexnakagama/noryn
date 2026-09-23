@@ -19,6 +19,7 @@ func New() Model {
 	input.Placeholder = "Ask Noryn anything..."
 	input.Prompt = "> "
 	input.CharLimit = 0
+	input.ShowLineNumbers = false
 
 	return Model{
 		textarea: input,
@@ -26,9 +27,8 @@ func New() Model {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.Type == tea.KeyEnter {
+	if key, ok := msg.(tea.KeyMsg); ok {
+		if key.Type == tea.KeyEnter {
 			content := m.Value()
 
 			if content == "" {
