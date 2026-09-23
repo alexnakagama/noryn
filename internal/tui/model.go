@@ -71,8 +71,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case input.SubmitMessage:
 		m.chat = m.chat.AddMessage(chat.Message{
-			Role:    "user",
-			Content: msg.Content,
+			Role: "user",
+			Parts: []chat.Part{
+				chat.TextPart{
+					Content: msg.Content,
+				},
+			},
 		})
 
 		return m, m.startAgent(msg.Content)
@@ -158,13 +162,19 @@ func (m Model) handleAgentEvent(event agent.Event) (tea.Model, tea.Cmd) {
 
 	case agent.EventToolCall:
 		if event.ToolCall != nil {
-			m.chat = m.chat.AddToolMessage(
-				"Running " + event.ToolCall.Name + "...",
+			m.chat = m.chat.AddToolCall(
+				event.ToolCall.Name,
+				event.ToolCall.Arguments,
 			)
 		}
 
 	case agent.EventToolResult:
-		m.chat = m.chat.AddToolMessage(event.Content)
+		if event.ToolCall != nil {
+			m.chat = m.chat.CompleteTool(
+				event.ToolCall.Name,
+				event.Content,
+			)
+		}
 
 	case agent.EventDone:
 		m.chat = m.chat.FinishStreaming()
@@ -177,8 +187,12 @@ func (m Model) handleAgentEvent(event agent.Event) (tea.Model, tea.Cmd) {
 		m.status = m.status.SetStatus("error")
 
 		m.chat = m.chat.AddMessage(chat.Message{
-			Role:    "error",
-			Content: event.Content,
+			Role: "error",
+			Parts: []chat.Part{
+				chat.ErrorPart{
+					Content: event.Content,
+				},
+			},
 		})
 
 		return m, nil

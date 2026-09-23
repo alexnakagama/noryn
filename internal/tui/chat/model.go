@@ -58,3 +58,51 @@ func (m Model) FinishStreaming() Model {
 func (m Model) IsStreaming() bool {
 	return m.streaming
 }
+
+func (m Model) AddToolCall(name string, arguments string) Model {
+	if len(m.messages) == 0 {
+		return m
+	}
+
+	last := &m.messages[len(m.messages)-1]
+
+	if last.Role != "assistant" {
+		return m
+	}
+
+	last.Parts = append(last.Parts, ToolPart{
+		Name:      name,
+		Arguments: arguments,
+		Status:    "running",
+	})
+
+	return m
+}
+
+func (m Model) CompleteTool(name string, result string) Model {
+	if len(m.messages) == 0 {
+		return m
+	}
+
+	last := &m.messages[len(m.messages)-1]
+
+	for i := len(last.Parts) - 1; i >= 0; i-- {
+		part, ok := last.Parts[i].(ToolPart)
+		if !ok {
+			continue
+		}
+
+		if part.Name != name || part.Status != "running" {
+			continue
+		}
+
+		part.Status = "completed"
+		part.Result = result
+
+		last.Parts[i] = part
+
+		return m
+	}
+
+	return m
+}
