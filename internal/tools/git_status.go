@@ -36,7 +36,7 @@ func (t *GitStatusTool) Definition() llm.ToolDefinition {
 	}
 }
 
-func (t *GitStatusTool) Execute(arguements string) (string, error) {
+func (t *GitStatusTool) Execute(arguments string) (string, error) {
 	cmd := exec.Command("git", "status", "--short")
 	cmd.Dir = t.project.Root
 
