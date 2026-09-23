@@ -59,6 +59,15 @@ func TestSearchTool_Execute(t *testing.T) {
 			),
 		},
 		{
+			name: "searches inside a specific file",
+			args: `{"query":"TODO","path":"main.go"}`,
+			want: searchMatch(
+				"main.go",
+				4,
+				"\t// TODO: greet",
+			),
+		},
+		{
 			name: "does not report directories as matches",
 			args: `{"query":"needle","path":"."}`,
 			setup: func(t *testing.T, root string) {
