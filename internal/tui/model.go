@@ -23,7 +23,7 @@ type Model struct {
 }
 
 func New(a *agent.Agent, model, projectInstructions, projectContext string) Model {
-	return Model{
+	m := Model{
 		agent:               a,
 		model:               model,
 		projectInstructions: projectInstructions,
@@ -32,10 +32,14 @@ func New(a *agent.Agent, model, projectInstructions, projectContext string) Mode
 		input:               input.New(),
 		status:              status.New(),
 	}
+
+	m.input.SetHintRight(model)
+
+	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.input.Focus()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -44,7 +48,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		m.input.SetWidth(msg.Width - 4)
+		m.input.SetWidth(msg.Width)
 
 	case input.SubmitMessage:
 		m.chat = m.chat.AddMessage(chat.Message{

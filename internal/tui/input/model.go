@@ -7,7 +7,9 @@ import (
 )
 
 type Model struct {
-	textarea textarea.Model
+	textarea  textarea.Model
+	width     int
+	hintRight string
 }
 
 type SubmitMessage struct {
@@ -17,11 +19,11 @@ type SubmitMessage struct {
 func New() Model {
 	input := textarea.New()
 
-	input.Placeholder = "Ask Noryn anything..."
+	input.Placeholder = "Describe the task you want accomplished..."
 	input.Prompt = "> "
 	input.CharLimit = 0
 	input.ShowLineNumbers = false
-	input.SetHeight(5)
+	input.SetHeight(3)
 
 	input.FocusedStyle.CursorLine = lipgloss.NewStyle()
 
@@ -50,7 +52,18 @@ func New() Model {
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if key, ok := msg.(tea.KeyMsg); ok {
-		if key.Type == tea.KeyEnter {
+		switch {
+		case key.Type == tea.KeyEnter && key.Alt:
+			var cmd tea.Cmd
+			m.textarea, cmd = m.textarea.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			return m, cmd
+
+		case key.Type == tea.KeyCtrlJ:
+			var cmd tea.Cmd
+			m.textarea, cmd = m.textarea.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			return m, cmd
+
+		case key.Type == tea.KeyEnter:
 			content := m.Value()
 
 			if content == "" {
@@ -87,5 +100,17 @@ func (m *Model) Focus() tea.Cmd {
 }
 
 func (m *Model) SetWidth(width int) {
-	m.textarea.SetWidth(width)
+	m.width = width
+
+	inner := width - 4
+
+	if inner < 1 {
+		inner = 1
+	}
+
+	m.textarea.SetWidth(inner)
+}
+
+func (m *Model) SetHintRight(hint string) {
+	m.hintRight = hint
 }

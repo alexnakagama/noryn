@@ -23,24 +23,23 @@ func (m Model) View() string {
 		lipgloss.Height(header) -
 		lipgloss.Height(input) -
 		lipgloss.Height(status) -
-		6
+		2
 
-	if availableHeight < 1 {
-		availableHeight = 1
+	if availableHeight < 0 {
+		availableHeight = 0
 	}
 
-	chatArea := lipgloss.NewStyle().
-		Height(availableHeight).
-		Render(chat)
+	rows := []string{header, ""}
 
-	content := strings.Join([]string{
-		header,
-		"",
-		chatArea,
-		input,
-		"",
-		status,
-	}, "\n")
+	if availableHeight > 0 {
+		rows = append(rows, lipgloss.NewStyle().
+			Height(availableHeight).
+			Render(chat))
+	}
+
+	rows = append(rows, input, "", status)
+
+	content := strings.Join(rows, "\n")
 
 	return AppStyle.
 		Width(m.width).
