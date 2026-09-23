@@ -32,23 +32,37 @@ func New() Model {
 		return ""
 	})
 
-	input.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	panel := lipgloss.NewStyle().
+		Background(lipgloss.Color(inputBackground))
+
+	input.FocusedStyle.Base = panel
+	input.BlurredStyle.Base = panel
+
+	input.FocusedStyle.CursorLine = lipgloss.NewStyle().
+		Background(lipgloss.Color(cursorLineBackground))
 
 	input.FocusedStyle.Text = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#D8DEE9"))
+		Foreground(lipgloss.Color(inputText))
 
 	input.FocusedStyle.Prompt = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7AA2F7")).
+		Foreground(lipgloss.Color(inputPrompt)).
 		Bold(true)
 
-	input.BlurredStyle.CursorLine = lipgloss.NewStyle()
+	input.FocusedStyle.Placeholder = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(inputMuted))
+
+	input.BlurredStyle.CursorLine = lipgloss.NewStyle().
+		Background(lipgloss.Color(cursorLineBackground))
 
 	input.BlurredStyle.Text = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#D8DEE9"))
+		Foreground(lipgloss.Color(inputText))
 
 	input.BlurredStyle.Prompt = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7AA2F7")).
+		Foreground(lipgloss.Color(inputPrompt)).
 		Bold(true)
+
+	input.BlurredStyle.Placeholder = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(inputMuted))
 
 	input.Focus()
 
