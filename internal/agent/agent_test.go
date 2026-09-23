@@ -19,6 +19,37 @@ type stubClient struct {
 	callCount int
 }
 
+type streamingStubClient struct {
+	chunks   []llm.StreamChunk
+	requests []llm.Request
+}
+
+func (c *streamingStubClient) Chat(
+	_ context.Context,
+	request llm.Request,
+) (llm.Response, error) {
+	c.requests = append(c.requests, request)
+
+	return llm.Response{}, nil
+}
+
+func (c *streamingStubClient) ChatStream(
+	_ context.Context,
+	request llm.Request,
+) (<-chan llm.StreamChunk, error) {
+	c.requests = append(c.requests, request)
+
+	stream := make(chan llm.StreamChunk, len(c.chunks))
+
+	for _, chunk := range c.chunks {
+		stream <- chunk
+	}
+
+	close(stream)
+
+	return stream, nil
+}
+
 func (c *stubClient) Chat(_ context.Context, request llm.Request) (llm.Response, error) {
 	c.requests = append(c.requests, request)
 
@@ -854,5 +885,56 @@ func TestTruncateToolResult(t *testing.T) {
 				t.Errorf("truncateToolResult() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestChatStreamEmitsText(t *testing.T) {
+	client := &streamingStubClient{
+		chunks: []llm.StreamChunk{
+			{Content: "Hello"},
+			{Content: " world"},
+			{Done: true},
+		},
+	}
+
+	agent := New(client, tools.NewRegistry())
+
+	stream, err := agent.ChatStream(
+		context.Background(),
+		llm.Request{
+			Model: "test-model",
+			Messages: []llm.Message{
+				{Role: "user", Content: "say hello"},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("ChatStream() error = %v", err)
+	}
+
+	var events []Event
+
+	for event := range stream {
+		events = append(events, event)
+	}
+
+	if len(events) != 3 {
+		t.Fatalf("got %d events, want 3", len(events))
+	}
+
+	if events[0].Type != EventText {
+		t.Errorf("events[0].Type = %v, want EventText", events[0].Type)
+	}
+
+	if events[0].Content != "Hello" {
+		t.Errorf("events[0].Content = %q, want %q", events[0].Content, "Hello")
+	}
+
+	if events[1].Content != " world" {
+		t.Errorf("events[1].Content = %q, want %q", events[1].Content, " world")
+	}
+
+	if events[2].Type != EventDone {
+		t.Errorf("events[2].Type = %v, want EventDone", events[2].Type)
 	}
 }
