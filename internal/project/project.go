@@ -11,9 +11,6 @@ type Project struct {
 }
 
 func (p *Project) ResolvePath(path string) (string, error) {
-	fmt.Printf("ROOT: %q\n", p.Root)
-	fmt.Printf("PATH: %q\n", path)
-
 	if path == "" {
 		return "", fmt.Errorf("path cannot be empty")
 	}
