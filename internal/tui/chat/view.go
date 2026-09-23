@@ -11,12 +11,23 @@ func (m Model) View() string {
 
 	for _, message := range m.messages {
 		switch message.Role {
+
 		case "user":
 			view.WriteString("> ")
 			view.WriteString(message.Content)
 			view.WriteString("\n\n")
 
 		case "assistant":
+			view.WriteString(message.Content)
+			view.WriteString("\n\n")
+
+		case "tool":
+			view.WriteString("  ")
+			view.WriteString(message.Content)
+			view.WriteString("\n\n")
+
+		case "error":
+			view.WriteString("Error: ")
 			view.WriteString(message.Content)
 			view.WriteString("\n\n")
 		}
