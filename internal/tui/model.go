@@ -43,6 +43,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
+	case input.SubmitMessage:
+		m.chat = m.chat.AddMessage(chat.Message{
+			Role:    "user",
+			Content: msg.Content,
+		})
 	}
 
 	var cmd tea.Cmd
