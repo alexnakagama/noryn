@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/alexnakagama/noryn/internal/tui/styles"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func (m Model) View() string {
@@ -17,7 +18,7 @@ func (m Model) View() string {
 		"Press Enter to start",
 	)
 
-	return strings.Join([]string{
+	content := strings.Join([]string{
 		title,
 		"",
 		tagline,
@@ -25,4 +26,9 @@ func (m Model) View() string {
 		"",
 		help,
 	}, "\n")
+
+	return lipgloss.NewStyle().
+		Align(lipgloss.Center).
+		AlignVertical(lipgloss.Center).
+		Render(content)
 }
