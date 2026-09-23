@@ -28,6 +28,8 @@ func (m Model) View() string {
 	}, "\n")
 
 	return lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height).
 		Align(lipgloss.Center).
 		AlignVertical(lipgloss.Center).
 		Render(content)
