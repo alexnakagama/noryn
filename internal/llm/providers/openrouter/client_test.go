@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/alexnakagama/noryn/internal/llm"
@@ -121,5 +122,88 @@ func TestClient_ChatStream_ToolCall(t *testing.T) {
 			call.Arguments,
 			`{"path":"main.go"}`,
 		)
+	}
+}
+
+func TestClient_ChatStream_HTTPError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "invalid api key", http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	client := NewClient("invalid-key")
+	client.baseURL = server.URL
+
+	_, err := client.ChatStream(context.Background(), llm.Request{
+		Model: "test-model",
+	})
+
+	if err == nil {
+		t.Fatal("ChatStream() error = nil, want error")
+	}
+
+	if !strings.Contains(err.Error(), "401") {
+		t.Errorf("ChatStream() error = %q, want status 401", err)
+	}
+}
+
+func TestClient_ChatStream_InvalidEvent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+
+		fmt.Fprintln(w, `data: {"choices":[{"delta":{"content":"Hello"}}]}`)
+		fmt.Fprintln(w, `data: invalid-json`)
+	}))
+	defer server.Close()
+
+	client := NewClient("test-key")
+	client.baseURL = server.URL
+
+	stream, err := client.ChatStream(context.Background(), llm.Request{
+		Model: "test-model",
+	})
+
+	if err != nil {
+		t.Fatalf("ChatStream() error = %v", err)
+	}
+
+	var gotError error
+
+	for chunk := range stream {
+		if chunk.Err != nil {
+			gotError = chunk.Err
+			break
+		}
+	}
+
+	if gotError == nil {
+		t.Fatal("stream error = nil, want error")
+	}
+}
+
+func TestClient_ChatStream_CancelledContext(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+
+	client := NewClient("test-key")
+	client.baseURL = server.URL
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	stream, err := client.ChatStream(ctx, llm.Request{
+		Model: "test-model",
+	})
+
+	if err != nil {
+		t.Fatalf("ChatStream() error = %v", err)
+	}
+
+	cancel()
+
+	for range stream {
 	}
 }
