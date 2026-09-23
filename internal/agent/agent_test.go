@@ -938,3 +938,64 @@ func TestChatStreamEmitsText(t *testing.T) {
 		t.Errorf("events[2].Type = %v, want EventDone", events[2].Type)
 	}
 }
+
+func TestChatStreamEmitsToolCall(t *testing.T) {
+	call := llm.ToolCall{
+		ID:        "call-1",
+		Name:      "fake",
+		Arguments: `{"value":"hello"}`,
+	}
+
+	client := &streamingStubClient{
+		chunks: []llm.StreamChunk{
+			{Content: "Voy a usar una herramienta."},
+			{ToolCall: &call},
+			{Done: true},
+		},
+	}
+
+	agent := New(client, tools.NewRegistry(fakeTool{}))
+
+	stream, err := agent.ChatStream(
+		context.Background(),
+		llm.Request{
+			Model: "test-model",
+			Messages: []llm.Message{
+				{Role: "user", Content: "hacelo"},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("ChatStream() error = %v", err)
+	}
+
+	var events []Event
+
+	for event := range stream {
+		events = append(events, event)
+	}
+
+	if len(events) != 3 {
+		t.Fatalf("got %d events, want 3", len(events))
+	}
+
+	if events[0].Type != EventText {
+		t.Errorf("events[0].Type = %v, want EventText", events[0].Type)
+	}
+
+	if events[1].Type != EventToolCall {
+		t.Errorf("events[1].Type = %v, want EventToolCall", events[1].Type)
+	}
+
+	if events[1].ToolCall == nil {
+		t.Fatal("events[1].ToolCall = nil")
+	}
+
+	if !reflect.DeepEqual(*events[1].ToolCall, call) {
+		t.Errorf("tool call = %+v, want %+v", *events[1].ToolCall, call)
+	}
+
+	if events[2].Type != EventDone {
+		t.Errorf("events[2].Type = %v, want EventDone", events[2].Type)
+	}
+}
