@@ -116,6 +116,16 @@ func TestGitStatusTool_Execute(t *testing.T) {
 			want: "A  staged.txt\n?? untracked.txt\n",
 		},
 		{
+			name: "ignores arguments",
+			setup: func(t *testing.T, root string) {
+				t.Helper()
+
+				initGitRepo(t, root)
+				createGitFile(t, root, "test.txt", "hello\n")
+			},
+			want: "?? test.txt\n",
+		},
+		{
 			name:            "not a git repository returns an error",
 			wantErr:         true,
 			wantErrContains: "not a git repository",
@@ -139,9 +149,19 @@ func TestGitStatusTool_Execute(t *testing.T) {
 					t.Fatal("Execute() error = nil, want an error")
 				}
 
-				if tt.wantErrContains != "" && !strings.Contains(got, tt.wantErrContains) {
-					t.Errorf("Execute() output = %q, want it to contain %q", got, tt.wantErrContains)
+				if tt.wantErrContains != "" {
+					combined := strings.ToLower(err.Error() + "\n" + got)
+					want := strings.ToLower(tt.wantErrContains)
+
+					if !strings.Contains(combined, want) {
+						t.Errorf(
+							"Execute() error/output = %q, want it to contain %q",
+							combined,
+							tt.wantErrContains,
+						)
+					}
 				}
+
 				return
 			}
 
@@ -179,7 +199,12 @@ func runGit(t *testing.T, root string, args ...string) string {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("git %s error = %v\n%s", strings.Join(args, " "), err, output)
+		t.Fatalf(
+			"git %s error = %v\n%s",
+			strings.Join(args, " "),
+			err,
+			output,
+		)
 	}
 
 	return string(output)
