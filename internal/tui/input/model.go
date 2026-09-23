@@ -52,10 +52,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) View() string {
-	return m.textarea.View()
-}
-
 func (m Model) Value() string {
 	return m.textarea.Value()
 }
