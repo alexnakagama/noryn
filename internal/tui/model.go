@@ -4,6 +4,7 @@ import (
 	"github.com/alexnakagama/noryn/internal/tui/chat"
 	"github.com/alexnakagama/noryn/internal/tui/input"
 	"github.com/alexnakagama/noryn/internal/tui/status"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 type Model struct {
@@ -21,4 +22,22 @@ func New() Model {
 		input:  input.New(),
 		status: status.New(),
 	}
+}
+
+func (m Model) Init() tea.Cmd {
+	return m.input.Focus()
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+	}
+
+	var cmd tea.Cmd
+
+	m.input, cmd = m.input.Update(msg)
+
+	return m, cmd
 }
