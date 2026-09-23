@@ -29,3 +29,9 @@ type ToolDefinition struct {
 	Description string
 	Parameters  map[string]any
 }
+
+type StreamChunk struct {
+	Content  string
+	ToolCall *ToolCall
+	Done     bool
+}
