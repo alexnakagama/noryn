@@ -4,9 +4,10 @@ import "github.com/charmbracelet/lipgloss"
 
 // Tokyo Night color palette.
 var (
-	ColorBase    = lipgloss.Color("#1A1B26")
+	ColorBase    = lipgloss.Color("#0D0E12")
 	ColorSurface = lipgloss.Color("#16161E")
 	ColorOverlay = lipgloss.Color("#24283B")
+
 	ColorText    = lipgloss.Color("#C0CAF5")
 	ColorSubtext = lipgloss.Color("#565F89")
 
@@ -19,16 +20,17 @@ var (
 	ColorOrange = lipgloss.Color("#FF9E64")
 )
 
-// Cursor is the prefix used for the currently focused item.
 const Cursor = "▸ "
 
-// Tagline returns the welcome screen tagline with the given version.
 func Tagline(version string) string {
 	return "Noryn " + version + " — AI coding assistant"
 }
 
-// Pre-built reusable styles.
 var (
+	AppStyle = lipgloss.NewStyle().
+			Background(ColorBase).
+			Foreground(ColorText)
+
 	TitleStyle = lipgloss.NewStyle().
 			Foreground(ColorBlue).
 			Bold(true)
@@ -58,24 +60,4 @@ var (
 
 	WarningStyle = lipgloss.NewStyle().
 			Foreground(ColorYellow)
-
-	FrameStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(ColorOverlay).
-			Padding(1, 2)
-
-	PanelStyle = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorOverlay).
-			Padding(0, 1)
-
-	ProgressFilled = lipgloss.NewStyle().
-			Foreground(ColorGreen)
-
-	ProgressEmpty = lipgloss.NewStyle().
-			Foreground(ColorOverlay)
-
-	PercentStyle = lipgloss.NewStyle().
-			Foreground(ColorOrange).
-			Bold(true)
 )
