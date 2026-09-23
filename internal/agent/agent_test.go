@@ -62,6 +62,45 @@ func (c *stubClient) Chat(_ context.Context, request llm.Request) (llm.Response,
 	return response, nil
 }
 
+type streamingSequenceClient struct {
+	streams  [][]llm.StreamChunk
+	requests []llm.Request
+	call     int
+}
+
+func (c *streamingSequenceClient) Chat(
+	_ context.Context,
+	request llm.Request,
+) (llm.Response, error) {
+	c.requests = append(c.requests, request)
+
+	return llm.Response{}, nil
+}
+
+func (c *streamingSequenceClient) ChatStream(
+	_ context.Context,
+	request llm.Request,
+) (<-chan llm.StreamChunk, error) {
+	c.requests = append(c.requests, request)
+
+	if c.call >= len(c.streams) {
+		return nil, errors.New("unexpected stream call")
+	}
+
+	chunks := c.streams[c.call]
+	c.call++
+
+	stream := make(chan llm.StreamChunk, len(chunks))
+
+	for _, chunk := range chunks {
+		stream <- chunk
+	}
+
+	close(stream)
+
+	return stream, nil
+}
+
 // failingClient always returns the configured error.
 type failingClient struct {
 	err error
@@ -998,4 +1037,87 @@ func TestChatStreamEmitsToolCall(t *testing.T) {
 	if events[2].Type != EventDone {
 		t.Errorf("events[2].Type = %v, want EventDone", events[2].Type)
 	}
+}
+
+func TestChatStreamExecutesToolAndContinues(t *testing.T) {
+	firstCall := llm.ToolCall{
+		ID:        "call-1",
+		Name:      "fake",
+		Arguments: "hello",
+	}
+
+	client := &streamingSequenceClient{
+		streams: [][]llm.StreamChunk{
+			{
+				{Content: "Voy a usar la herramienta."},
+				{ToolCall: &firstCall},
+				{Done: true},
+			},
+			{
+				{Content: "Listo."},
+				{Done: true},
+			},
+		},
+	}
+
+	agent := New(client, tools.NewRegistry(fakeTool{}))
+
+	stream, err := agent.ChatStream(
+		context.Background(),
+		llm.Request{
+			Model: "test-model",
+			Messages: []llm.Message{
+				{Role: "user", Content: "ejecutala"},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("ChatStream() error = %v", err)
+	}
+
+	var events []Event
+
+	for event := range stream {
+		events = append(events, event)
+	}
+
+	var gotTypes []EventType
+
+	for _, event := range events {
+		gotTypes = append(gotTypes, event.Type)
+	}
+
+	wantTypes := []EventType{
+		EventText,
+		EventToolCall,
+		EventToolResult,
+		EventText,
+		EventDone,
+	}
+
+	if !reflect.DeepEqual(gotTypes, wantTypes) {
+		t.Fatalf("event types = %v, want %v", gotTypes, wantTypes)
+	}
+
+	if len(client.requests) != 2 {
+		t.Fatalf("client received %d requests, want 2", len(client.requests))
+	}
+
+	wantHistory := []llm.Message{
+		{Role: "user", Content: "ejecutala"},
+		{
+			Role:    "assistant",
+			Content: "Voy a usar la herramienta.",
+			ToolCalls: []llm.ToolCall{
+				firstCall,
+			},
+		},
+		{
+			Role:       "tool",
+			Content:    "result(hello)",
+			ToolCallID: "call-1",
+		},
+	}
+
+	assertMessages(t, client.requests[1].Messages, wantHistory)
 }
