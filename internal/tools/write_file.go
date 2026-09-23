@@ -38,16 +38,16 @@ func (t *WriteFileTool) Definition() llm.ToolDefinition {
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"query": map[string]any{
+				"path": map[string]any{
 					"type":        "string",
 					"description": "Path of the file to write.",
 				},
-				"path": map[string]any{
+				"content": map[string]any{
 					"type":        "string",
 					"description": "Content to write to the file.",
 				},
 			},
-			"required": []string{"query", "path"},
+			"required": []string{"path", "content"},
 		},
 	}
 }
