@@ -96,3 +96,57 @@ func (a *Agent) Chat(ctx context.Context, request llm.Request) (llm.Response, er
 		request.Messages = a.context.Build(a.history)
 	}
 }
+
+func (a *Agent) ChatStream(ctx context.Context, request llm.Request) (<-chan Event, error) {
+	streamingClient, ok := a.client.(llm.StreamingClient)
+	if !ok {
+		return nil, fmt.Errorf("client does not support streaming")
+	}
+
+	events := make(chan Event)
+
+	go func() {
+		defer close(events)
+
+		stream, err := streamingClient.ChatStream(ctx, request)
+		if err != nil {
+			events <- Event{
+				Type:    EventError,
+				Content: err.Error(),
+			}
+			return
+		}
+
+		for chunk := range stream {
+			if chunk.Err != nil {
+				events <- Event{
+					Type:    EventError,
+					Content: chunk.Err.Error(),
+				}
+				return
+			}
+
+			if chunk.Content != "" {
+				events <- Event{
+					Type:    EventText,
+					Content: chunk.Content,
+				}
+			}
+
+			if chunk.ToolCall != nil {
+				events <- Event{
+					Type:     EventToolCall,
+					ToolCall: chunk.ToolCall,
+				}
+			}
+
+			if chunk.Done {
+				events <- Event{
+					Type: EventDone,
+				}
+			}
+		}
+	}()
+
+	return events, nil
+}
