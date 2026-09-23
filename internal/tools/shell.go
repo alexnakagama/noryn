@@ -24,6 +24,7 @@ type shellArguments struct {
 func NewShellTool(project *project.Project) *ShellTool {
 	return &ShellTool{
 		project: project,
+		timeout: defaultShellTimeout,
 	}
 }
 
