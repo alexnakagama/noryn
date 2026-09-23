@@ -18,8 +18,9 @@ type Model struct {
 	status status.Model
 }
 
-func New() Model {
+func New(a *agent.Agent) Model {
 	return Model{
+		agent:  a,
 		chat:   chat.New(),
 		input:  input.New(),
 		status: status.New(),
