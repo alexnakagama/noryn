@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/alexnakagama/noryn/internal/llm"
 	"github.com/alexnakagama/noryn/internal/tools"
@@ -103,47 +104,115 @@ func (a *Agent) ChatStream(ctx context.Context, request llm.Request) (<-chan Eve
 		return nil, fmt.Errorf("client does not support streaming")
 	}
 
+	a.history = append(a.history, request.Messages...)
+	request.Tools = a.registry.Definitions()
+
 	events := make(chan Event)
 
 	go func() {
 		defer close(events)
 
-		stream, err := streamingClient.ChatStream(ctx, request)
-		if err != nil {
-			events <- Event{
-				Type:    EventError,
-				Content: err.Error(),
-			}
-			return
-		}
+		toolIterations := 0
 
-		for chunk := range stream {
-			if chunk.Err != nil {
+		for {
+			request.Messages = a.context.Build(a.history)
+
+			stream, err := streamingClient.ChatStream(ctx, request)
+			if err != nil {
 				events <- Event{
 					Type:    EventError,
-					Content: chunk.Err.Error(),
+					Content: err.Error(),
 				}
 				return
 			}
 
-			if chunk.Content != "" {
-				events <- Event{
-					Type:    EventText,
-					Content: chunk.Content,
+			var content strings.Builder
+			var toolCalls []llm.ToolCall
+
+			for chunk := range stream {
+				if chunk.Err != nil {
+					events <- Event{
+						Type:    EventError,
+						Content: chunk.Err.Error(),
+					}
+					return
+				}
+
+				if chunk.Content != "" {
+					content.WriteString(chunk.Content)
+
+					events <- Event{
+						Type:    EventText,
+						Content: chunk.Content,
+					}
+				}
+
+				if chunk.ToolCall != nil {
+					toolCalls = append(toolCalls, *chunk.ToolCall)
+
+					call := *chunk.ToolCall
+
+					events <- Event{
+						Type:     EventToolCall,
+						ToolCall: &call,
+					}
 				}
 			}
 
-			if chunk.ToolCall != nil {
-				events <- Event{
-					Type:     EventToolCall,
-					ToolCall: chunk.ToolCall,
-				}
+			assistantMessage := llm.Message{
+				Role:      "assistant",
+				Content:   content.String(),
+				ToolCalls: toolCalls,
 			}
 
-			if chunk.Done {
+			a.history = append(a.history, assistantMessage)
+
+			if len(toolCalls) == 0 {
 				events <- Event{
 					Type: EventDone,
 				}
+				return
+			}
+
+			toolIterations++
+
+			if toolIterations > maxToolIterations {
+				events <- Event{
+					Type:    EventError,
+					Content: "maximum tool iterations exceeded",
+				}
+				return
+			}
+
+			for _, call := range toolCalls {
+				if a.onToolCall != nil {
+					a.onToolCall(call)
+				}
+
+				result, err := a.registry.Execute(call)
+				if err != nil {
+					result = "tool error: " + err.Error()
+				}
+
+				result = truncateToolResult(result)
+
+				if a.onToolResult != nil {
+					a.onToolResult(call, result)
+				}
+
+				callCopy := call
+
+				events <- Event{
+					Type:     EventToolResult,
+					Content:  result,
+					ToolCall: &callCopy,
+				}
+
+				a.history = append(a.history, llm.Message{
+					Role:       "tool",
+					Content:    result,
+					ToolCallID: call.ID,
+				})
 			}
 		}
 	}()
