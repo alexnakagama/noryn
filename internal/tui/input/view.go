@@ -6,29 +6,39 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const (
+	inputBackground = "#1A1B26"
+	inputBorder     = "#303640"
+	inputMuted      = "#565F6D"
+	inputPrompt     = "#7AA2F7"
+	inputText       = "#D8DEE9"
+)
+
 func (m Model) View() string {
 	box := lipgloss.NewStyle().
+		Background(lipgloss.Color(inputBackground)).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#303640")).
+		BorderForeground(lipgloss.Color(inputBorder)).
 		Padding(0, 1).
 		Render(m.textarea.View())
 
 	hintStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#565F6D"))
+		Background(lipgloss.Color(inputBackground)).
+		Foreground(lipgloss.Color(inputMuted))
 
-	hint := hintStyle.Render("enter: send • alt+enter: newline")
+	hintText := "enter: send • alt+enter: newline"
 
 	if m.hintRight != "" {
-		right := hintStyle.Render(m.hintRight)
-
-		pad := m.width - lipgloss.Width(hint) - lipgloss.Width(right)
+		pad := m.width - lipgloss.Width(hintText) - lipgloss.Width(m.hintRight)
 
 		if pad < 1 {
 			pad = 1
 		}
 
-		hint += strings.Repeat(" ", pad) + right
+		hintText += strings.Repeat(" ", pad) + m.hintRight
 	}
+
+	hint := hintStyle.Render(hintText)
 
 	return box + "\n" + hint
 }

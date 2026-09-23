@@ -25,6 +25,13 @@ func New() Model {
 	input.ShowLineNumbers = false
 	input.SetHeight(3)
 
+	input.SetPromptFunc(2, func(line int) string {
+		if line == 0 {
+			return "> "
+		}
+		return ""
+	})
+
 	input.FocusedStyle.CursorLine = lipgloss.NewStyle()
 
 	input.FocusedStyle.Text = lipgloss.NewStyle().
