@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/alexnakagama/noryn/internal/llm"
+	"github.com/alexnakagama/noryn/internal/tools"
 )
 
 // stubClient returns queued responses, one per Chat call, and records every
@@ -158,31 +159,10 @@ func assertMessages(t *testing.T, got, want []llm.Message) {
 	}
 }
 
-func TestNewRegistersToolsByName(t *testing.T) {
-	agent := New(&stubClient{}, fakeTool{})
-
-	got, err := agent.executeTool(llm.ToolCall{Name: "fake", Arguments: "hello"})
-	if err != nil {
-		t.Fatalf("executeTool() error = %v", err)
-	}
-	if got != "result(hello)" {
-		t.Errorf("executeTool() = %q, want %q", got, "result(hello)")
-	}
-}
-
-func TestNewUnknownToolCallReturnsAnError(t *testing.T) {
-	agent := New(&stubClient{})
-
-	_, err := agent.executeTool(llm.ToolCall{Name: "unknown", Arguments: "x"})
-	if err == nil {
-		t.Fatal("executeTool() error = nil, want an error")
-	}
-}
-
 func TestChatReturnsResponseWithoutToolCalls(t *testing.T) {
 	final := finalResponse("done")
 	client := &stubClient{responses: []llm.Response{final}}
-	agent := New(client)
+	agent := New(client, tools.NewRegistry())
 	request := llm.Request{
 		Model:    "test-model",
 		Messages: []llm.Message{{Role: "user", Content: "hi"}},
@@ -215,7 +195,7 @@ func TestChatExecutesToolAndFeedsResultBack(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "fake", Arguments: "hello"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 	request := llm.Request{
 		Messages: []llm.Message{{Role: "user", Content: "run it"}},
 	}
@@ -249,7 +229,7 @@ func TestChatHandlesMultipleToolCallsInOneTurn(t *testing.T) {
 		),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 	request := llm.Request{Messages: []llm.Message{{Role: "user", Content: "run it"}}}
 
 	_, err := agent.Chat(context.Background(), request)
@@ -271,7 +251,7 @@ func TestChatReportsToolFailuresBackToTheModel(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "fake", Arguments: "boom"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 	request := llm.Request{Messages: []llm.Message{{Role: "user", Content: "run it"}}}
 
 	_, err := agent.Chat(context.Background(), request)
@@ -292,7 +272,7 @@ func TestChatReportsUnknownToolCallsBackToTheModel(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "ghost", Arguments: "x"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 	request := llm.Request{Messages: []llm.Message{{Role: "user", Content: "run it"}}}
 
 	_, err := agent.Chat(context.Background(), request)
@@ -310,7 +290,7 @@ func TestChatReportsUnknownToolCallsBackToTheModel(t *testing.T) {
 
 func TestChatReturnsClientErrors(t *testing.T) {
 	wantErr := errors.New("model unavailable")
-	agent := New(&failingClient{err: wantErr})
+	agent := New(&failingClient{err: wantErr}, tools.NewRegistry())
 
 	_, err := agent.Chat(context.Background(), llm.Request{})
 	if !errors.Is(err, wantErr) {
@@ -325,7 +305,7 @@ func TestChatSendsToolDefinitions(t *testing.T) {
 		},
 	}
 
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	_, err := agent.Chat(context.Background(), llm.Request{})
 	if err != nil {
@@ -356,7 +336,7 @@ func TestChatSendsToolDefinitionsOnEveryIteration(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "fake", Arguments: "x"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	_, err := agent.Chat(context.Background(), llm.Request{
 		Messages: []llm.Message{{Role: "user", Content: "run it"}},
@@ -394,7 +374,7 @@ func TestChatPreservesHistoryBetweenCalls(t *testing.T) {
 		},
 	}
 
-	agent := New(client)
+	agent := New(client, tools.NewRegistry())
 
 	_, err := agent.Chat(context.Background(), llm.Request{
 		Messages: []llm.Message{
@@ -449,7 +429,7 @@ func TestChatAccumulatesHistoryAcrossToolCalls(t *testing.T) {
 		finalResponse("first done"),
 		finalResponse("second done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	_, err := agent.Chat(context.Background(), llm.Request{
 		Messages: []llm.Message{{Role: "user", Content: "first message"}},
@@ -494,7 +474,7 @@ func TestChatReturnsClientErrorMidLoop(t *testing.T) {
 		{response: toolCallResponse(llm.ToolCall{ID: "call-1", Name: "fake", Arguments: "x"})},
 		{err: wantErr},
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	_, err := agent.Chat(context.Background(), llm.Request{
 		Messages: []llm.Message{{Role: "user", Content: "run it"}},
@@ -516,7 +496,7 @@ func TestChatReturnsClientErrorMidLoop(t *testing.T) {
 
 func TestChatEnforcesMaxToolIterations(t *testing.T) {
 	client := &toolLoopClient{}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	var callCount, resultCount int
 	agent.SetToolCallHandler(func(llm.ToolCall) { callCount++ })
@@ -558,7 +538,7 @@ func TestChatToolCallHandlerReceivesEachCall(t *testing.T) {
 		),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	var calls []llm.ToolCall
 	agent.SetToolCallHandler(func(call llm.ToolCall) {
@@ -595,7 +575,7 @@ func TestChatToolResultHandlerReceivesResults(t *testing.T) {
 		),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	var results []result
 	agent.SetToolResultHandler(func(call llm.ToolCall, value string) {
@@ -629,7 +609,7 @@ func TestChatToolResultHandlerReceivesErrorResults(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "fake", Arguments: "boom"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	var results []result
 	agent.SetToolResultHandler(func(call llm.ToolCall, value string) {
@@ -665,7 +645,7 @@ func TestChatToolResultHandlerReceivesUnknownToolError(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "ghost", Arguments: "x"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	var results []result
 	agent.SetToolResultHandler(func(call llm.ToolCall, value string) {
@@ -693,7 +673,7 @@ func TestChatToolResultHandlerReceivesUnknownToolError(t *testing.T) {
 
 func TestChatHandlersNotInvokedWithoutToolCalls(t *testing.T) {
 	client := &stubClient{responses: []llm.Response{finalResponse("done")}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 
 	var callCount, resultCount int
 	agent.SetToolCallHandler(func(llm.ToolCall) { callCount++ })
@@ -720,7 +700,7 @@ func TestChatTruncatesLongToolResultsInHistory(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "long"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, longResultTool{})
+	agent := New(client, tools.NewRegistry(longResultTool{}))
 
 	var handledResult string
 	agent.SetToolResultHandler(func(_ llm.ToolCall, result string) {
@@ -754,7 +734,7 @@ func TestChatTruncatesLongToolResultsInHistory(t *testing.T) {
 
 func TestChatPassesBuiltHistoryToClient(t *testing.T) {
 	client := &stubClient{responses: []llm.Response{finalResponse("done")}}
-	agent := New(client)
+	agent := New(client, tools.NewRegistry())
 	agent.context = newTestManager(3)
 
 	history := numberedHistory(5)
@@ -776,7 +756,7 @@ func TestChatRebuildsHistoryAfterToolTurn(t *testing.T) {
 		toolCallResponse(llm.ToolCall{ID: "call-1", Name: "fake", Arguments: "x"}),
 		finalResponse("done"),
 	}}
-	agent := New(client, fakeTool{})
+	agent := New(client, tools.NewRegistry(fakeTool{}))
 	agent.context = newTestManager(6)
 
 	_, err := agent.Chat(context.Background(), llm.Request{
@@ -809,7 +789,7 @@ func TestChatRebuildsHistoryAfterToolTurn(t *testing.T) {
 
 func TestChatTrimsHistoryAtRealLimit(t *testing.T) {
 	client := &stubClient{responses: []llm.Response{finalResponse("done")}}
-	agent := New(client)
+	agent := New(client, tools.NewRegistry())
 
 	history := make([]llm.Message, 0, 105)
 	for i := 0; i < 105; i++ {

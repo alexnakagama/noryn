@@ -56,8 +56,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	agent := agent.New(
-		client,
+	registry := tools.NewRegistry(
 		tools.NewReadFileTool(project),
 		tools.NewWriteFileTool(project),
 		tools.NewListDirectoryTool(project),
@@ -66,6 +65,11 @@ func main() {
 		tools.NewGitStatusTool(project),
 		tools.NewGitDiffTool(project),
 		tools.NewGitLogTool(project),
+	)
+
+	agent := agent.New(
+		client,
+		registry,
 	)
 
 	agent.SetToolCallHandler(func(call llm.ToolCall) {
