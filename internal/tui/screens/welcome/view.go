@@ -17,7 +17,9 @@ const logo = `
 `
 
 func (m Model) View() string {
-	logo := styles.TitleStyle.Render(strings.TrimSpace(logo))
+	logoText := styles.TitleStyle.Render(
+		strings.TrimSpace(logo),
+	)
 
 	tagline := styles.SubtextStyle.Render(
 		styles.Tagline("v0.1.0"),
@@ -28,7 +30,7 @@ func (m Model) View() string {
 	)
 
 	content := strings.Join([]string{
-		logo,
+		logoText,
 		"",
 		tagline,
 		"",

@@ -5,6 +5,7 @@ import (
 	"github.com/alexnakagama/noryn/internal/tui/screens/welcome"
 	"github.com/alexnakagama/noryn/internal/tui/styles"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type Model struct {
@@ -55,8 +56,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	return styles.AppStyle.
-		Width(m.width).
-		Height(m.height).
-		Render(m.welcome.View())
+	content := m.welcome.View()
+
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		content,
+		lipgloss.WithWhitespaceBackground(styles.ColorBase),
+	)
 }
