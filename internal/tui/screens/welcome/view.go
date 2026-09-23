@@ -7,8 +7,17 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const logo = `
+███╗   ██╗ ██████╗ ██████╗ ██╗   ██╗███╗   ██╗
+████╗  ██║██╔═══██╗██╔══██╗╚██╗ ██╔╝████╗  ██║
+██╔██╗ ██║██║   ██║██████╔╝ ╚████╔╝ ██╔██╗ ██║
+██║╚██╗██║██║   ██║██╔══██╗  ╚██╔╝  ██║╚██╗██║
+██║ ╚████║╚██████╔╝██║  ██║   ██║   ██║ ╚████║
+╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═══╝
+`
+
 func (m Model) View() string {
-	title := styles.TitleStyle.Render("NORYN")
+	logo := styles.TitleStyle.Render(strings.TrimSpace(logo))
 
 	tagline := styles.SubtextStyle.Render(
 		styles.Tagline("v0.1.0"),
@@ -19,7 +28,7 @@ func (m Model) View() string {
 	)
 
 	content := strings.Join([]string{
-		title,
+		logo,
 		"",
 		tagline,
 		"",
