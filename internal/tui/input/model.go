@@ -125,7 +125,13 @@ func (m *Model) Focus() tea.Cmd {
 func (m *Model) SetWidth(width int) {
 	m.width = width
 
-	inner := width - 4
+	box := width - 2*inputSideMargin
+
+	if box < 10 {
+		box = width
+	}
+
+	inner := box - 4
 
 	if inner < 1 {
 		inner = 1

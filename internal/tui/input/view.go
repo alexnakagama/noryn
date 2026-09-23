@@ -7,21 +7,33 @@ import (
 )
 
 const (
-	inputBackground    = "#16181F"
-	inputBorder        = "#303640"
-	inputBorderFocused = "#7AA2F7"
-	inputMuted         = "#7C8594"
-	inputPrompt        = "#7AA2F7"
-	inputText          = "#D8DEE9"
-	inputHeight        = 3
+	inputBackground     = "#16181F"
+	inputSideBackground = "#1A1B26"
+	inputBorder         = "#303640"
+	inputBorderFocused  = "#7AA2F7"
+	inputMuted          = "#7C8594"
+	inputPrompt         = "#7AA2F7"
+	inputText           = "#D8DEE9"
+	inputSideMargin     = 8
+	inputHeight         = 3
 )
 
 func (m Model) View() string {
-	innerWidth := m.width - 4
+	boxWidth := m.width - 2*inputSideMargin
+
+	if boxWidth < 10 {
+		boxWidth = m.width
+	}
+
+	innerWidth := boxWidth - 4
 
 	if innerWidth < 1 {
 		innerWidth = 1
 	}
+
+	leftPad := lipgloss.NewStyle().
+		Background(lipgloss.Color(inputSideBackground)).
+		Render(strings.Repeat(" ", (m.width-boxWidth)/2))
 
 	borderColor := inputBorder
 	if m.textarea.Focused() {
@@ -45,6 +57,7 @@ func (m Model) View() string {
 
 	var b strings.Builder
 
+	b.WriteString(leftPad)
 	b.WriteString(border.Render("╭" + strings.Repeat("─", innerWidth+2) + "╮"))
 	b.WriteString("\n")
 
@@ -55,6 +68,7 @@ func (m Model) View() string {
 			line += panel.Render(strings.Repeat(" ", innerWidth-visible))
 		}
 
+		b.WriteString(leftPad)
 		b.WriteString(border.Render("│"))
 		b.WriteString(panel.Render(" "))
 		b.WriteString(line)
@@ -63,6 +77,7 @@ func (m Model) View() string {
 		b.WriteString("\n")
 	}
 
+	b.WriteString(leftPad)
 	b.WriteString(border.Render("╰" + strings.Repeat("─", innerWidth+2) + "╯"))
 
 	hintStyle := lipgloss.NewStyle().
@@ -72,7 +87,7 @@ func (m Model) View() string {
 	hintText := "enter: send • alt+enter: newline"
 
 	if m.hintRight != "" {
-		pad := m.width - lipgloss.Width(hintText) - lipgloss.Width(m.hintRight)
+		pad := boxWidth - lipgloss.Width(hintText) - lipgloss.Width(m.hintRight)
 
 		if pad < 1 {
 			pad = 1
@@ -81,7 +96,7 @@ func (m Model) View() string {
 		hintText += strings.Repeat(" ", pad) + m.hintRight
 	}
 
-	return b.String() + "\n" + hintStyle.Render(hintText)
+	return b.String() + "\n" + leftPad + hintStyle.Render(hintText)
 }
 
 // recolorTransparentSpaces re-emits any space cell that was drawn without an
