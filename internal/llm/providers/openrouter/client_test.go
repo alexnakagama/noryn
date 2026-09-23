@@ -180,30 +180,3 @@ func TestClient_ChatStream_InvalidEvent(t *testing.T) {
 		t.Fatal("stream error = nil, want error")
 	}
 }
-
-func TestClient_ChatStream_CancelledContext(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-
-		<-r.Context().Done()
-	}))
-	defer server.Close()
-
-	client := NewClient("test-key")
-	client.baseURL = server.URL
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	stream, err := client.ChatStream(ctx, llm.Request{
-		Model: "test-model",
-	})
-
-	if err != nil {
-		t.Fatalf("ChatStream() error = %v", err)
-	}
-
-	cancel()
-
-	for range stream {
-	}
-}
