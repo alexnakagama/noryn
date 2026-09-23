@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -65,10 +66,18 @@ func (t *ShellTool) Execute(arguments string) (string, error) {
 		return "", fmt.Errorf("command cannot be empty")
 	}
 
-	cmd := exec.Command("sh", "-c", args.Command)
+	ctx, cancel := context.WithTimeout(context.Background(), t.timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "sh", "-c", args.Command)
 	cmd.Dir = t.project.Root
 
 	output, err := cmd.CombinedOutput()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return string(output), fmt.Errorf("command timed out after %s", t.timeout)
+	}
+
 	if err != nil {
 		return string(output), err
 	}
