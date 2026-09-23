@@ -3,6 +3,7 @@ package input
 import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type Model struct {
@@ -20,6 +21,18 @@ func New() Model {
 	input.Prompt = "> "
 	input.CharLimit = 0
 	input.ShowLineNumbers = false
+
+	input.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	input.FocusedStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("#D8DEE9"))
+	input.FocusedStyle.Prompt = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7AA2F7")).
+		Bold(true)
+
+	input.BlurredStyle.CursorLine = lipgloss.NewStyle()
+	input.BlurredStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("#D8DEE9"))
+	input.BlurredStyle.Prompt = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7AA2F7")).
+		Bold(true)
 
 	input.Focus()
 
