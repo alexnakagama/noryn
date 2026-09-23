@@ -35,7 +35,7 @@ func New(a *agent.Agent, model, projectInstructions, projectContext string) Mode
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.input.Focus()
+	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

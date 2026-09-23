@@ -21,6 +21,8 @@ func New() Model {
 	input.CharLimit = 0
 	input.ShowLineNumbers = false
 
+	input.Focus()
+
 	return Model{
 		textarea: input,
 	}
